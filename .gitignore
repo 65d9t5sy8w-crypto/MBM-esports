@@ -27,6 +27,8 @@ Thumbs.db
 _build_mbm_core/
 artifacts/
 intake/raw/bo3gg/
+intake/raw/oddspapi/
+fixtures/**/synthetic_out/
 
 # Do not commit unverified Core substitutes.
 # Only the authentic checksum-pinned wheel may live under vendor/mbm-core/.

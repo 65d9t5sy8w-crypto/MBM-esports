@@ -1,0 +1,20 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored v4-shaped tournaments list for unit tests only. Not an OddsPapi response."
+  },
+  "results": [
+    {
+      "tournamentId": 17001,
+      "tournamentSlug": "synthetic-cs2-cup",
+      "tournamentName": "Synthetic CS2 Cup",
+      "categorySlug": "esports",
+      "categoryName": "Esports",
+      "futureFixtures": 1,
+      "upcomingFixtures": 1,
+      "liveFixtures": 0
+    }
+  ]
+}

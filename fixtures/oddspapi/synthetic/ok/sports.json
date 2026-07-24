@@ -1,0 +1,13 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored v4-shaped sports list for unit tests only. Not an OddsPapi response."
+  },
+  "results": [
+    {"sportId": 17, "slug": "counter-strike", "sportName": "ESport Counter-Strike"},
+    {"sportId": 18, "slug": "league-of-legends", "sportName": "ESport League of Legends"},
+    {"sportId": 61, "slug": "valorant", "sportName": "ESport Valorant"}
+  ]
+}
