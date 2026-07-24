@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,8 +37,15 @@ def _meta(result: OddsPapiHttpResult, endpoint: str) -> dict[str, Any]:
 
 
 def _write_live_raw(store: RawStore, event_key: str, name: str, result: OddsPapiHttpResult) -> str:
-    """Persist byte-for-byte live OddsPapi v4 outcome under intake/raw/oddspapi only."""
-    record = store.write(
+    """Persist live OddsPapi v4 response bytes under intake/raw/oddspapi.
+
+    Stores the original ``result.body`` bytes (plus redacted metadata) so
+    provider formatting/key order survive for provenance hashing. Does not
+    re-serialize ``json_body``.
+    """
+    meta_name = f"{name}.meta.json"
+    body_name = f"{name}.body"
+    store.write(
         event_key,
         {
             "source": ODDSPAPI_SOURCE,
@@ -46,11 +54,17 @@ def _write_live_raw(store: RawStore, event_key: str, name: str, result: OddsPapi
             "status": result.status,
             "content_type": result.content_type,
             "unavailable_reason": result.unavailable_reason,
-            "body": result.json_body
-            if result.json_body is not None
-            else result.body.decode("utf-8", errors="replace"),
+            "body_filename": body_name,
+            "body_sha256": hashlib.sha256(result.body).hexdigest(),
+            "body_byte_length": len(result.body),
         },
-        filename=f"{name}.json",
+        filename=meta_name,
+    )
+    record = store.write(
+        event_key,
+        result.body,
+        filename=body_name,
+        media_type=result.content_type or "application/octet-stream",
     )
     return str(record.path.as_posix())
 
@@ -227,7 +241,7 @@ def refresh_live_smoke(
             tournaments.unavailable_reason,
             captured_at=captured,
             raw_ref=str(
-                (out_dir / "oddspapi" / event_key / "raw" / "tournaments.json").as_posix()
+                (out_dir / "oddspapi" / event_key / "raw" / "tournaments.body").as_posix()
             ),
         )
         dest = out_dir / env.fixture.event_id
@@ -263,7 +277,7 @@ def refresh_live_smoke(
             captured_at=captured,
             raw_ref=str(
                 (
-                    out_dir / "oddspapi" / event_key / "raw" / "odds_by_tournaments.json"
+                    out_dir / "oddspapi" / event_key / "raw" / "odds_by_tournaments.body"
                 ).as_posix()
             ),
         )

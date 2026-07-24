@@ -60,17 +60,52 @@ def _as_list(payload: Any) -> list[Any]:
 
 
 def _start_time_iso(value: Any, fallback: str) -> str:
+    """Normalize provider start times to ISO-8601 UTC.
+
+    Accepts epoch seconds/ms (int/float/digit-like strings) and ISO strings.
+    Plausible serialized epochs like ``\"1785002400.0\"`` or ``\"+1785002400\"``
+    are converted; invalid values fall back instead of passing through.
+    """
     if value is None or value == "":
         return fallback
-    if isinstance(value, str) and not str(value).isdigit():
-        return str(value)
+
+    if isinstance(value, (int, float)):
+        try:
+            ts = int(value)
+            if ts > 10_000_000_000:
+                ts = ts // 1000
+            return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+        except (ValueError, OSError, OverflowError):
+            return fallback
+
+    text = str(value).strip()
+    if not text:
+        return fallback
+
+    # Already an ISO-ish timestamp string from OddsPapi v4 docs.
+    if "T" in text or text.endswith("Z"):
+        return text
+
+    # Attempt numeric epoch parse for digit-like strings (incl. +/decimals).
     try:
-        ts = int(value)
+        ts = int(float(text))
         if ts > 10_000_000_000:
             ts = ts // 1000
         return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
     except (TypeError, ValueError, OSError, OverflowError):
-        return str(value) if value else fallback
+        return fallback
+
+
+def _select_fixture(fixtures: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
+    """Prefer a fixture with usable Pinnacle market evidence for single-envelope smoke."""
+    for row in fixtures:
+        if row.get("hasOdds") and _extract_pinnacle_prices(row):
+            return row, f"selected fixture with hasOdds+pinnacle prices ({row.get('fixtureId')})"
+    for row in fixtures:
+        if row.get("hasOdds"):
+            return row, f"selected fixture with hasOdds ({row.get('fixtureId')})"
+    first = fixtures[0]
+    return first, f"selected first fixture ({first.get('fixtureId')})"
 
 
 def _team_labels(fixture: dict[str, Any]) -> tuple[str, str]:
@@ -273,12 +308,12 @@ def normalize_oddspapi_bundle(
             source=source,
         )
 
-    fixture = fixtures[0]
+    fixture, selection_detail = _select_fixture(fixtures)
     attempts.append(
         SourceAttempt(
             source=source,
             outcome="accepted",
-            detail="selected fixture from odds_by_tournaments",
+            detail=selection_detail,
         )
     )
 

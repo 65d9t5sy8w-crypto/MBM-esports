@@ -12,6 +12,7 @@ from mbm.analyst.cs2_bridge import decide_headshots
 from mbm.core_pin import core_ready
 from mbm.providers.oddspapi.client import (
     API_KEY_ENV,
+    AUTHORIZED_V4_PATHS,
     BASE_URL,
     SPORT_ID_CS2,
     SPORT_ID_LOL,
@@ -22,7 +23,13 @@ from mbm.providers.oddspapi.client import (
     OddsPapiV4Adapter,
     redact_api_key,
 )
-from mbm.providers.oddspapi.pipeline import refresh_from_synthetic
+from mbm.providers.oddspapi.normalize import (
+    _select_fixture,
+    _start_time_iso,
+    normalize_oddspapi_bundle,
+)
+from mbm.providers.oddspapi.pipeline import _write_live_raw, refresh_from_synthetic
+from mbm.intake.raw.store import RawStore
 from mbm.intake.types import Recommendation
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,6 +100,69 @@ class TestOddsPapiV4Certification(unittest.TestCase):
             adapter.request("/v5/sports")
         with self.assertRaises(ValueError):
             adapter.request("/sports")
+        with self.assertRaises(ValueError):
+            adapter.request("/v4/players")
+        self.assertEqual(
+            AUTHORIZED_V4_PATHS,
+            frozenset({"/v4/sports", "/v4/tournaments", "/v4/odds-by-tournaments"}),
+        )
+
+    def test_timeout_returns_unavailable_not_crash(self) -> None:
+        adapter = OddsPapiV4Adapter(api_key="test-key")
+        with patch("urllib.request.urlopen", side_effect=TimeoutError("timed out")):
+            result = adapter.sports()
+        self.assertFalse(result.available)
+        self.assertIn("transport error", result.unavailable_reason or "")
+        self.assertIn("timed out", result.unavailable_reason or "")
+
+    def test_start_time_iso_parses_serialized_epochs(self) -> None:
+        fallback = "1970-01-01T00:00:00Z"
+        self.assertTrue(_start_time_iso("1785002400", fallback).startswith("2026-"))
+        self.assertTrue(_start_time_iso("1785002400.0", fallback).startswith("2026-"))
+        self.assertTrue(_start_time_iso("+1785002400", fallback).startswith("2026-"))
+        self.assertEqual(_start_time_iso("not-a-time", fallback), fallback)
+        self.assertEqual(
+            _start_time_iso("2026-07-25T18:00:00.000Z", fallback),
+            "2026-07-25T18:00:00.000Z",
+        )
+
+    def test_select_fixture_prefers_has_odds_with_pinnacle(self) -> None:
+        bare = {"fixtureId": "a", "hasOdds": False}
+        odds_only = {"fixtureId": "b", "hasOdds": True, "bookmakerOdds": {}}
+        priced = {
+            "fixtureId": "c",
+            "hasOdds": True,
+            "bookmakerOdds": {
+                "pinnacle": {
+                    "markets": {
+                        "1": {"outcomes": {"1": {"players": {"0": {"price": 1.9}}}}}
+                    }
+                }
+            },
+        }
+        chosen, detail = _select_fixture([bare, odds_only, priced])
+        self.assertEqual(chosen["fixtureId"], "c")
+        self.assertIn("pinnacle", detail)
+
+    def test_write_live_raw_preserves_original_body_bytes(self) -> None:
+        raw_bytes = b'{"fixtureId":"x","keepOrder":true}'
+        result = OddsPapiHttpResult(
+            ok=True,
+            status=200,
+            content_type="application/json",
+            body=raw_bytes,
+            url="https://api.oddspapi.io/v4/sports?apiKey=REDACTED",
+            json_body={"fixtureId": "x", "keepOrder": True},
+            unavailable_reason=None,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            store = RawStore(Path(tmp))
+            path = _write_live_raw(store, "evt1", "sports", result)
+            written = Path(path).read_bytes()
+            self.assertEqual(written, raw_bytes)
+            meta = json.loads((Path(tmp) / "evt1" / "raw" / "sports.meta.json").read_text())
+            self.assertEqual(meta["body_byte_length"], len(raw_bytes))
+            self.assertNotIn("apiKey=secret", json.dumps(meta))
 
     def test_production_endpoints_are_v4_only(self) -> None:
         adapter = OddsPapiV4Adapter(api_key="test-key")

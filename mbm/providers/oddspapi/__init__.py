@@ -2,6 +2,7 @@
 
 from mbm.providers.oddspapi.client import (
     API_KEY_ENV,
+    AUTHORIZED_V4_PATHS,
     BASE_URL,
     SPORT_ID_CS2,
     SPORT_ID_LOL,
@@ -17,6 +18,7 @@ from mbm.providers.oddspapi.pipeline import refresh_from_synthetic, refresh_live
 
 __all__ = [
     "API_KEY_ENV",
+    "AUTHORIZED_V4_PATHS",
     "BASE_URL",
     "SPORT_ID_CS2",
     "SPORT_ID_LOL",

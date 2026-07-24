@@ -32,6 +32,9 @@ SPORT_ID_VALORANT = 61
 VERIFIED_ESPORTS_SPORT_IDS: frozenset[int] = frozenset(
     {SPORT_ID_CS2, SPORT_ID_LOL, SPORT_ID_VALORANT}
 )
+AUTHORIZED_V4_PATHS: frozenset[str] = frozenset(
+    {"/v4/sports", "/v4/tournaments", "/v4/odds-by-tournaments"}
+)
 
 _API_KEY_QUERY_RE = re.compile(r"([?&]apiKey=)[^&]*", re.IGNORECASE)
 
@@ -89,9 +92,9 @@ class OddsPapiV4Adapter:
         }
 
     def request(self, path: str, params: Mapping[str, Any] | None = None) -> OddsPapiHttpResult:
-        if not path.startswith("/v4/"):
+        if path not in AUTHORIZED_V4_PATHS:
             raise ValueError(
-                f"OddsPapiV4Adapter refuses non-v4 path {path!r}; "
+                f"OddsPapiV4Adapter refuses unauthorized path {path!r}; "
                 "only /v4/sports, /v4/tournaments, /v4/odds-by-tournaments are authorized"
             )
         if not self.api_key:
@@ -135,6 +138,16 @@ class OddsPapiV4Adapter:
                     f"OddsPapi unavailable: HTTP {exc.code} "
                     f"content_type={content_type or 'missing'}"
                 ),
+            )
+        except TimeoutError as exc:
+            return OddsPapiHttpResult(
+                ok=False,
+                status=0,
+                content_type="",
+                body=b"",
+                url=safe_url,
+                json_body=None,
+                unavailable_reason=f"OddsPapi unavailable: transport error ({exc})",
             )
         except urllib.error.URLError as exc:
             return OddsPapiHttpResult(
