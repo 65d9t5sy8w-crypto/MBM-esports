@@ -1,4 +1,9 @@
-"""Normalize OddsPapi-shaped bundles into EvidenceEnvelope (live or synthetic)."""
+"""Normalize OddsPapi v4 bundles into EvidenceEnvelope (live or synthetic).
+
+Ingests tournament/event/market-price evidence from verified v4 endpoints only.
+Does not claim headshot (or other player-prop) availability unless an authentic
+redacted v4 fixture demonstrates those fields.
+"""
 
 from __future__ import annotations
 
@@ -18,223 +23,127 @@ from mbm.intake.types import (
     ProvenanceItem,
     SourceAttempt,
 )
+from mbm.providers.oddspapi.client import (
+    SPORT_ID_CS2,
+    SPORT_ID_LOL,
+    SPORT_ID_VALORANT,
+    VERIFIED_ESPORTS_SPORT_IDS,
+)
 
 SOURCE_ODDSPAPI = "oddspapi"
 SOURCE_SYNTHETIC = "synthetic_test_fixture"
+
+SPORT_LABELS = {
+    SPORT_ID_CS2: "ESport Counter-Strike",
+    SPORT_ID_LOL: "ESport League of Legends",
+    SPORT_ID_VALORANT: "ESport Valorant",
+}
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _epoch_to_iso(value: Any, fallback: str) -> str:
-    if value is None or value == "":
-        return fallback
-    if isinstance(value, str) and not value.isdigit():
-        return value
-    try:
-        ts = int(value)
-        # OddsPapi startTime is epoch seconds; changedAt may be ms.
-        if ts > 10_000_000_000:
-            ts = ts // 1000
-        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
-    except (TypeError, ValueError, OSError, OverflowError):
-        return fallback
-
-
-def _as_list(payload: Any) -> list[dict[str, Any]]:
+def _as_list(payload: Any) -> list[Any]:
     if payload is None:
         return []
     if isinstance(payload, list):
-        return [x for x in payload if isinstance(x, dict)]
+        return payload
     if isinstance(payload, dict):
-        for key in ("results", "data", "fixtures", "items"):
+        for key in ("results", "data", "fixtures", "items", "odds"):
             val = payload.get(key)
             if isinstance(val, list):
-                return [x for x in val if isinstance(x, dict)]
-        if "fixtureId" in payload or "id" in payload:
+                return val
+        if "fixtureId" in payload:
             return [payload]
     return []
 
 
-def _participant_names(fixture: dict[str, Any]) -> tuple[str, str]:
-    parts = fixture.get("participants") or {}
-    if isinstance(parts, dict):
-        a = str(
-            parts.get("participant1Name")
-            or parts.get("homeName")
-            or parts.get("team_a")
-            or ""
-        )
-        b = str(
-            parts.get("participant2Name")
-            or parts.get("awayName")
-            or parts.get("team_b")
-            or ""
-        )
-        if a or b:
-            return a, b
-    if isinstance(parts, list) and len(parts) >= 2:
-        def _name(row: Any) -> str:
-            if isinstance(row, dict):
-                return str(row.get("name") or row.get("participantName") or "")
-            return str(row or "")
+def _start_time_iso(value: Any, fallback: str) -> str:
+    if value is None or value == "":
+        return fallback
+    if isinstance(value, str) and not str(value).isdigit():
+        return str(value)
+    try:
+        ts = int(value)
+        if ts > 10_000_000_000:
+            ts = ts // 1000
+        return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    except (TypeError, ValueError, OSError, OverflowError):
+        return str(value) if value else fallback
 
-        return _name(parts[0]), _name(parts[1])
-    return (
-        str(fixture.get("team_a") or fixture.get("home") or ""),
-        str(fixture.get("team_b") or fixture.get("away") or ""),
+
+def _team_labels(fixture: dict[str, Any]) -> tuple[str, str]:
+    a = str(
+        fixture.get("participant1Name")
+        or fixture.get("team_a")
+        or (
+            f"participant:{fixture['participant1Id']}"
+            if fixture.get("participant1Id") is not None
+            else ""
+        )
     )
+    b = str(
+        fixture.get("participant2Name")
+        or fixture.get("team_b")
+        or (
+            f"participant:{fixture['participant2Id']}"
+            if fixture.get("participant2Id") is not None
+            else ""
+        )
+    )
+    return a, b
 
 
-def _players_from_odds_and_roster(
-    fixture: dict[str, Any],
-    odds_payload: Any,
-    players_payload: Any,
-) -> list[PlayerIdentity]:
-    by_id: dict[str, PlayerIdentity] = {}
-    team_a, team_b = _participant_names(fixture)
-    parts = fixture.get("participants") if isinstance(fixture.get("participants"), dict) else {}
-    p1 = str((parts or {}).get("participant1Id") or "")
-    p2 = str((parts or {}).get("participant2Id") or "")
+def _extract_pinnacle_prices(fixture: dict[str, Any]) -> list[dict[str, Any]]:
+    """Collect Pinnacle market prices when the provider returns them.
 
-    for row in _as_list(players_payload):
-        pid = str(row.get("playerId") or row.get("id") or "")
-        if not pid:
+    Stores bookmaker prices as structured market evidence. Does **not** infer
+    headshot props or Maps 1–2 player lines from unverified synthetic shapes.
+    """
+    prices: list[dict[str, Any]] = []
+    bookmaker_odds = fixture.get("bookmakerOdds") or {}
+    if not isinstance(bookmaker_odds, dict):
+        return prices
+    pinnacle = bookmaker_odds.get("pinnacle")
+    if not isinstance(pinnacle, dict):
+        return prices
+    markets = pinnacle.get("markets") or {}
+    if not isinstance(markets, dict):
+        return prices
+    for market_id, market in markets.items():
+        if not isinstance(market, dict):
             continue
-        team = team_a
-        part = str(row.get("participantId") or "")
-        if part and part == p2:
-            team = team_b
-        elif part and part == p1:
-            team = team_a
-        by_id[pid] = PlayerIdentity(
-            player_id=pid,
-            name=str(row.get("playerName") or row.get("name") or pid),
-            team=team,
-        )
-
-    # Player props on the odds board also introduce player ids.
-    if isinstance(odds_payload, dict):
-        odds_root = odds_payload.get("odds") if isinstance(odds_payload.get("odds"), dict) else odds_payload
-        if isinstance(odds_root, dict):
-            for book_map in odds_root.values():
-                if not isinstance(book_map, dict):
-                    continue
-                for outcome in book_map.values():
-                    if not isinstance(outcome, dict):
-                        continue
-                    pid_raw = outcome.get("playerId")
-                    if pid_raw in (None, 0, "0", ""):
-                        continue
-                    pid = str(pid_raw)
-                    if pid not in by_id:
-                        by_id[pid] = PlayerIdentity(
-                            player_id=pid,
-                            name=str(outcome.get("playerName") or pid),
-                            team="",
-                        )
-    return list(by_id.values())
-
-
-def _looks_like_headshots(market_name: str, outcome: dict[str, Any]) -> bool:
-    blob = " ".join(
-        str(x)
-        for x in (
-            market_name,
-            outcome.get("marketName"),
-            outcome.get("marketNameShort"),
-            outcome.get("bookmakerMarketId"),
-            outcome.get("stat"),
-        )
-        if x
-    ).lower()
-    return "headshot" in blob or blob.strip() == "hs"
-
-
-def _market_lines_from_odds(
-    odds_payload: Any,
-    *,
-    target_player_id: str | None,
-    line: float | None,
-    markets_index: dict[str, dict[str, Any]] | None = None,
-) -> list[MarketLine]:
-    """Extract Maps 1–2 headshots lines from player-prop odds when present."""
-    lines: list[MarketLine] = []
-    seen: set[tuple[str, float]] = set()
-    markets_index = markets_index or {}
-
-    if target_player_id is not None and line is not None:
-        key = (str(target_player_id), float(line))
-        seen.add(key)
-        lines.append(
-            MarketLine(
-                player_id=str(target_player_id),
-                stat="headshots",
-                line=float(line),
-                market_scope=MarketScope.MAPS_1_2,
-            )
-        )
-
-    if not isinstance(odds_payload, dict):
-        return lines
-
-    odds_root = odds_payload.get("odds") if isinstance(odds_payload.get("odds"), dict) else None
-    if odds_root is None and any(
-        isinstance(v, dict) and ("price" in next(iter(v.values()), {}) if v else False)
-        for v in odds_payload.values()
-        if isinstance(v, dict)
-    ):
-        odds_root = odds_payload
-    if not isinstance(odds_root, dict):
-        return lines
-
-    for book_map in odds_root.values():
-        if not isinstance(book_map, dict):
+        outcomes = market.get("outcomes") or {}
+        if not isinstance(outcomes, dict):
             continue
-        for outcome in book_map.values():
+        for outcome_id, outcome in outcomes.items():
             if not isinstance(outcome, dict):
                 continue
-            pid_raw = outcome.get("playerId")
-            if pid_raw in (None, 0, "0", ""):
+            players = outcome.get("players") or {"0": outcome}
+            if not isinstance(players, dict):
                 continue
-            market_id = str(outcome.get("marketId") or "")
-            market_meta = markets_index.get(market_id, {})
-            market_name = str(market_meta.get("marketName") or outcome.get("marketName") or "")
-            if not _looks_like_headshots(market_name, outcome):
-                continue
-            handicap = outcome.get("handicap")
-            if handicap is None:
-                handicap = market_meta.get("handicap")
-            if handicap is None:
-                continue
-            try:
-                line_val = float(handicap)
-            except (TypeError, ValueError):
-                continue
-            pid = str(pid_raw)
-            key = (pid, line_val)
-            if key in seen:
-                continue
-            seen.add(key)
-            lines.append(
-                MarketLine(
-                    player_id=pid,
-                    stat="headshots",
-                    line=line_val,
-                    market_scope=MarketScope.MAPS_1_2,
+            for player_key, row in players.items():
+                if not isinstance(row, dict):
+                    continue
+                if "price" not in row:
+                    continue
+                prices.append(
+                    {
+                        "bookmaker": "pinnacle",
+                        "market_id": str(market_id),
+                        "outcome_id": str(outcome_id),
+                        "player_key": str(player_key),
+                        "player_name": row.get("playerName"),
+                        "price": row.get("price"),
+                        "price_american": row.get("priceAmerican"),
+                        "bookmaker_outcome_id": row.get("bookmakerOutcomeId"),
+                        "active": row.get("active"),
+                        "main_line": row.get("mainLine"),
+                        "limit": row.get("limit"),
+                    }
                 )
-            )
-    return lines
-
-
-def _markets_index(markets_payload: Any) -> dict[str, dict[str, Any]]:
-    index: dict[str, dict[str, Any]] = {}
-    for row in _as_list(markets_payload):
-        mid = str(row.get("marketId") or row.get("id") or "")
-        if mid:
-            index[mid] = row
-    return index
+    return prices
 
 
 def unavailable_envelope(
@@ -245,7 +154,7 @@ def unavailable_envelope(
     raw_ref: str | None = None,
     source: str = SOURCE_ODDSPAPI,
 ) -> EvidenceEnvelope:
-    """Canonical envelope when OddsPapi cannot supply usable JSON."""
+    """Canonical envelope when OddsPapi v4 cannot supply usable JSON."""
     captured = captured_at or _now_iso()
     ledger = list(attempts or [])
     ledger.append(SourceAttempt(source=source, outcome="unavailable", detail=reason))
@@ -292,16 +201,17 @@ def normalize_oddspapi_bundle(
     force_source: str | None = None,
     not_for_projection: bool | None = None,
     captured_at_display: str | None = ...,  # type: ignore[assignment]
+    sport_id: int | None = None,
 ) -> EvidenceEnvelope:
-    """Normalize an OddsPapi-shaped bundle (live provider or synthetic test shape).
+    """Normalize an OddsPapi **v4** bundle (live provider or synthetic test shape).
 
     Expected keys (any may be missing → explicit PASS reasons via attempts):
-      sports, tournaments, fixtures, fixture_odds, participants, players, markets,
+      sports, tournaments, odds_by_tournaments,
       http_meta (list of {endpoint, status, content_type, unavailable_reason})
 
-    Hand-authored fixtures must pass force_source=synthetic_test_fixture and
-    not_for_projection=True. Only byte-for-byte OddsPapi responses may use
-    source=oddspapi.
+    Optional ``target_player_id`` + ``line`` may attach a Mason-supplied market
+    line for downstream gates; this does **not** assert that OddsPapi returned
+    headshot props.
     """
     clean = strip_secrets(bundle)
     source = force_source or str(clean.get("source") or SOURCE_ODDSPAPI)
@@ -346,22 +256,13 @@ def normalize_oddspapi_bundle(
                 )
             )
 
-    odds = clean.get("fixture_odds")
-    fixtures = _as_list(clean.get("fixtures"))
-    fixture: dict[str, Any] | None = None
-    if isinstance(odds, dict) and odds.get("fixtureId"):
-        fixture = odds
-        attempts.append(
-            SourceAttempt(source=source, outcome="accepted", detail="selected fixture from fixture_odds")
-        )
-    elif fixtures:
-        fixture = fixtures[0]
-        attempts.append(
-            SourceAttempt(source=source, outcome="accepted", detail="selected fixture from fixtures listing")
-        )
-
-    if fixture is None:
-        reason = "OddsPapi unavailable: no fixture objects in fixtures/fixture_odds"
+    fixtures = [
+        row
+        for row in _as_list(clean.get("odds_by_tournaments"))
+        if isinstance(row, dict) and row.get("fixtureId")
+    ]
+    if not fixtures:
+        reason = "OddsPapi unavailable: no fixture objects in odds_by_tournaments"
         if any(a.outcome == "unavailable" for a in attempts):
             reason = next(a.detail for a in attempts if a.outcome == "unavailable")
         return unavailable_envelope(
@@ -372,31 +273,53 @@ def normalize_oddspapi_bundle(
             source=source,
         )
 
-    team_a, team_b = _participant_names(fixture)
-    event_id = str(fixture.get("fixtureId") or fixture.get("id") or "unknown")
-    start = _epoch_to_iso(fixture.get("startTime") or fixture.get("start_time"), captured)
-    players = _players_from_odds_and_roster(fixture, odds, clean.get("players"))
-    market_lines = _market_lines_from_odds(
-        odds if isinstance(odds, dict) else {},
-        target_player_id=target_player_id,
-        line=line,
-        markets_index=_markets_index(clean.get("markets")),
+    fixture = fixtures[0]
+    attempts.append(
+        SourceAttempt(
+            source=source,
+            outcome="accepted",
+            detail="selected fixture from odds_by_tournaments",
+        )
     )
 
-    target = target_player_id or (market_lines[0].player_id if market_lines else None)
-    if target is None and players:
-        target = players[0].player_id
+    team_a, team_b = _team_labels(fixture)
+    event_id = str(fixture.get("fixtureId") or "unknown")
+    start = _start_time_iso(fixture.get("startTime") or fixture.get("start_time"), captured)
+    resolved_sport = int(sport_id or fixture.get("sportId") or clean.get("sport_id") or SPORT_ID_CS2)
+    pinnacle_prices = _extract_pinnacle_prices(fixture)
 
-    tournament = fixture.get("tournament") if isinstance(fixture.get("tournament"), dict) else {}
+    market_lines: list[MarketLine] = []
+    # Mason may attach an explicit line for gate testing; not a claim that OddsPapi
+    # returned headshot props.
+    if target_player_id is not None and line is not None:
+        market_lines.append(
+            MarketLine(
+                player_id=str(target_player_id),
+                stat="headshots",
+                line=float(line),
+                market_scope=MarketScope.MAPS_1_2,
+            )
+        )
+
+    players: list[PlayerIdentity] = []
+    if target_player_id is not None:
+        players.append(
+            PlayerIdentity(player_id=str(target_player_id), name=str(target_player_id), team=team_a)
+        )
+
     map_context: dict[str, Any] = {
-        "tournament": tournament,
-        "sport": fixture.get("sport") or {"sportId": 17, "sportName": "ESport Counter-Strike"},
-        "status": fixture.get("status"),
         "provider": source,
-        "bookmakers": (odds.get("bookmakers") if isinstance(odds, dict) else None),
+        "api_version": "v4",
+        "sport_id": resolved_sport,
+        "sport_label": SPORT_LABELS.get(resolved_sport, f"sport:{resolved_sport}"),
+        "tournament_id": fixture.get("tournamentId"),
+        "status_id": fixture.get("statusId"),
+        "has_odds": fixture.get("hasOdds"),
+        "pinnacle_prices": pinnacle_prices,
+        "verified_esports_sport_ids": sorted(VERIFIED_ESPORTS_SPORT_IDS),
         "not_for_projection": bool(not_for_projection),
-        # OddsPapi supplies market board, not CS2 match logs — completeness stays incomplete.
         "match_logs_source": "absent_from_oddspapi",
+        "player_prop_claim": "none_verified_from_v4_payload",
     }
 
     provenance = [
@@ -409,7 +332,13 @@ def normalize_oddspapi_bundle(
         ProvenanceItem(name="not_for_projection", source=source, value=bool(not_for_projection)),
         ProvenanceItem(name="market_scope", source=source, value=DEFAULT_MARKET_SCOPE.value),
         ProvenanceItem(name="event_id", source=source, value=event_id),
-        ProvenanceItem(name="sport_id", source=source, value=17),
+        ProvenanceItem(name="sport_id", source=source, value=resolved_sport),
+        ProvenanceItem(name="api_version", source=source, value="v4"),
+        ProvenanceItem(
+            name="pinnacle_price_count",
+            source=source,
+            value=len(pinnacle_prices),
+        ),
     ]
 
     attempts.append(
@@ -419,8 +348,7 @@ def normalize_oddspapi_bundle(
     status = EvidenceStatus.INCOMPLETE if synthetic or not_for_projection else EvidenceStatus.VERIFIED
     if not team_a or not team_b:
         status = EvidenceStatus.INCOMPLETE
-    # Odds-only boards cannot satisfy match-log completeness for Headshots gates.
-    if not market_lines:
+    if not pinnacle_prices and not market_lines:
         status = EvidenceStatus.INCOMPLETE
 
     prefix = "synthetic" if synthetic else "oddspapi"
@@ -442,8 +370,11 @@ def normalize_oddspapi_bundle(
         evidence_status=status,
         identity_status=IdentityStatus.UNRESOLVED,
         provenance=provenance,
-        evidence_completeness={"match_logs": False, "market_board": bool(market_lines)},
+        evidence_completeness={
+            "match_logs": False,
+            "market_board": bool(pinnacle_prices) or bool(market_lines),
+        },
         source_attempts=attempts,
         raw_ref=raw_ref,
-        target_player_id=str(target) if target else None,
+        target_player_id=str(target_player_id) if target_player_id else None,
     )

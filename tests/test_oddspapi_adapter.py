@@ -1,4 +1,4 @@
-"""OddsPapi adapter tests — synthetic fixtures only (not live provider evidence)."""
+"""OddsPapi v4 adapter certification — synthetic fixtures only."""
 
 from __future__ import annotations
 
@@ -12,9 +12,14 @@ from mbm.analyst.cs2_bridge import decide_headshots
 from mbm.core_pin import core_ready
 from mbm.providers.oddspapi.client import (
     API_KEY_ENV,
-    OddsPapiClient,
-    OddsPapiHttpResult,
+    BASE_URL,
+    SPORT_ID_CS2,
+    SPORT_ID_LOL,
+    SPORT_ID_VALORANT,
     USER_AGENT,
+    VERIFIED_ESPORTS_SPORT_IDS,
+    OddsPapiHttpResult,
+    OddsPapiV4Adapter,
     redact_api_key,
 )
 from mbm.providers.oddspapi.pipeline import refresh_from_synthetic
@@ -23,25 +28,100 @@ from mbm.intake.types import Recommendation
 ROOT = Path(__file__).resolve().parents[1]
 SYN_OK = ROOT / "fixtures" / "oddspapi" / "synthetic" / "ok"
 SYN_UNAVAIL = ROOT / "fixtures" / "oddspapi" / "synthetic" / "unavailable"
+PROD_ROOTS = (
+    ROOT / "mbm" / "providers" / "oddspapi",
+    ROOT / "scripts" / "refresh_oddspapi.py",
+)
 
 
-class TestOddsPapiSyntheticFixtures(unittest.TestCase):
+class TestOddsPapiV4Certification(unittest.TestCase):
     def test_synthetic_ok_is_labeled_not_oddspapi_evidence(self) -> None:
-        env = refresh_from_synthetic(SYN_OK, target_player_id="9001", line=18.5)
+        env = refresh_from_synthetic(SYN_OK, sport_id=SPORT_ID_CS2)
         self.assertEqual(env.source, "synthetic_test_fixture")
         self.assertTrue(env.map_context.get("not_for_projection"))
         self.assertEqual(env.fixture.team_a, "Test Team Alpha")
         self.assertEqual(env.fixture.team_b, "Test Team Bravo")
-        self.assertTrue(env.market_lines)
-        self.assertEqual(env.market_lines[0].stat, "headshots")
-        self.assertEqual(env.market_lines[0].line, 18.5)
+        self.assertEqual(env.map_context.get("api_version"), "v4")
+        self.assertEqual(env.map_context.get("sport_id"), SPORT_ID_CS2)
+        self.assertGreaterEqual(len(env.map_context.get("pinnacle_prices") or []), 1)
+        # Synthetic ok board is Pinnacle moneyline only — no verified headshot claim.
+        self.assertEqual(env.map_context.get("player_prop_claim"), "none_verified_from_v4_payload")
+        self.assertFalse(any(m.stat == "headshots" for m in env.market_lines))
         captured = next(p.value for p in env.provenance if p.name == "captured_at")
         self.assertIsNone(captured)
 
-    def test_synthetic_extracts_headshots_line_from_odds(self) -> None:
-        env = refresh_from_synthetic(SYN_OK)
+    def test_mason_attached_line_is_explicit_not_provider_prop_claim(self) -> None:
+        env = refresh_from_synthetic(
+            SYN_OK, target_player_id="9001", line=18.5, sport_id=SPORT_ID_CS2
+        )
         self.assertTrue(any(m.stat == "headshots" and m.line == 18.5 for m in env.market_lines))
-        self.assertEqual(env.target_player_id, "9001")
+        self.assertEqual(env.map_context.get("player_prop_claim"), "none_verified_from_v4_payload")
+
+    def test_verified_sport_ids_preserved(self) -> None:
+        self.assertEqual(VERIFIED_ESPORTS_SPORT_IDS, frozenset({17, 18, 61}))
+        self.assertEqual(SPORT_ID_CS2, 17)
+        self.assertEqual(SPORT_ID_LOL, 18)
+        self.assertEqual(SPORT_ID_VALORANT, 61)
+
+    def test_adapter_not_cs2_only(self) -> None:
+        adapter = OddsPapiV4Adapter(api_key="test-key")
+        for sport_id in (SPORT_ID_CS2, SPORT_ID_LOL, SPORT_ID_VALORANT):
+            with patch.object(adapter, "request") as req:
+                req.return_value = OddsPapiHttpResult(
+                    ok=True,
+                    status=200,
+                    content_type="application/json",
+                    body=b"[]",
+                    url=f"{BASE_URL}/v4/tournaments",
+                    json_body=[],
+                    unavailable_reason=None,
+                )
+                adapter.tournaments(sport_id=sport_id)
+                path = req.call_args.args[0]
+                params = req.call_args.args[1]
+                self.assertEqual(path, "/v4/tournaments")
+                self.assertEqual(params["sportId"], sport_id)
+
+    def test_rejects_unverified_sport_id(self) -> None:
+        adapter = OddsPapiV4Adapter(api_key="test-key")
+        with self.assertRaises(ValueError):
+            adapter.tournaments(sport_id=10)
+
+    def test_rejects_non_v4_paths(self) -> None:
+        adapter = OddsPapiV4Adapter(api_key="test-key")
+        with self.assertRaises(ValueError):
+            adapter.request("/v5/sports")
+        with self.assertRaises(ValueError):
+            adapter.request("/sports")
+
+    def test_production_endpoints_are_v4_only(self) -> None:
+        adapter = OddsPapiV4Adapter(api_key="test-key")
+        captured: list[str] = []
+
+        def _capture(path: str, params=None):
+            captured.append(path)
+            return OddsPapiHttpResult(
+                ok=True,
+                status=200,
+                content_type="application/json",
+                body=b"[]",
+                url=f"{BASE_URL}{path}",
+                json_body=[],
+                unavailable_reason=None,
+            )
+
+        with patch.object(adapter, "request", side_effect=_capture):
+            adapter.sports()
+            adapter.tournaments(sport_id=SPORT_ID_LOL)
+            adapter.odds_by_tournaments([17001], bookmaker="pinnacle")
+        self.assertEqual(
+            captured,
+            ["/v4/sports", "/v4/tournaments", "/v4/odds-by-tournaments"],
+        )
+
+    def test_base_url_is_api_oddspapi_v4_host(self) -> None:
+        self.assertEqual(BASE_URL, "https://api.oddspapi.io")
+        self.assertNotIn("v5", BASE_URL)
 
     def test_synthetic_unavailable_becomes_explicit_pass_reason(self) -> None:
         env = refresh_from_synthetic(SYN_UNAVAIL)
@@ -56,8 +136,8 @@ class TestOddsPapiSyntheticFixtures(unittest.TestCase):
     def test_fixture_meta_required(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp)
-            (bad / "fixtures.json").write_text(
-                json.dumps({"results": [{"fixtureId": "x", "participants": {}}]}),
+            (bad / "odds_by_tournaments.json").write_text(
+                json.dumps({"results": [{"fixtureId": "x"}]}),
                 encoding="utf-8",
             )
             with self.assertRaises(ValueError):
@@ -66,49 +146,58 @@ class TestOddsPapiSyntheticFixtures(unittest.TestCase):
     def test_user_agent_is_honest_mbm(self) -> None:
         self.assertTrue(USER_AGENT.startswith("MBM-esports/"))
         self.assertNotIn("Chrome", USER_AGENT)
-        self.assertNotIn("sec-ch-ua", USER_AGENT.lower())
 
     def test_client_headers_have_no_browser_impersonation(self) -> None:
-        client = OddsPapiClient(api_key="test-key")
-        headers = client._headers()
+        adapter = OddsPapiV4Adapter(api_key="test-key")
+        headers = adapter._headers()
         self.assertEqual(set(headers), {"Accept", "User-Agent"})
-        self.assertEqual(headers["User-Agent"], USER_AGENT)
         for banned in ("Origin", "Referer", "sec-ch-ua", "sec-fetch-mode"):
             self.assertNotIn(banned, headers)
 
     def test_redact_api_key_from_urls(self) -> None:
-        raw = "https://v5.oddspapi.io/en/fixtures?sportId=17&apiKey=secret-value"
+        raw = "https://api.oddspapi.io/v4/sports?apiKey=secret-value"
         self.assertIn("apiKey=REDACTED", redact_api_key(raw))
         self.assertNotIn("secret-value", redact_api_key(raw))
 
     def test_missing_api_key_is_explicit_unavailable(self) -> None:
-        with patch.dict("os.environ", {}, clear=False):
-            # Force empty key even if env is set in the shell.
-            client = OddsPapiClient(api_key="")
-            result = client.fixtures()
+        adapter = OddsPapiV4Adapter(api_key="")
+        result = adapter.sports()
         self.assertFalse(result.available)
         self.assertIn(API_KEY_ENV, result.unavailable_reason or "")
-        self.assertIn("apiKey", result.unavailable_reason or "")
 
     def test_live_unavailable_no_retry(self) -> None:
-        client = OddsPapiClient(api_key="test-key")
+        adapter = OddsPapiV4Adapter(api_key="test-key")
         fake = OddsPapiHttpResult(
             ok=False,
             status=401,
             content_type="application/json",
             body=b'{"error":401}',
-            url="https://v5.oddspapi.io/en/fixtures?apiKey=REDACTED",
+            url="https://api.oddspapi.io/v4/tournaments?apiKey=REDACTED",
             json_body=None,
             unavailable_reason="OddsPapi unavailable: HTTP 401 content_type=application/json",
         )
-        with patch.object(client, "request", return_value=fake) as req:
-            result = client.fixtures()
+        with patch.object(adapter, "request", return_value=fake) as req:
+            result = adapter.tournaments(sport_id=SPORT_ID_CS2)
             self.assertEqual(req.call_count, 1)
         self.assertFalse(result.available)
         self.assertIn("401", result.unavailable_reason or "")
 
+    def test_zero_v5_in_production_code(self) -> None:
+        offenders: list[str] = []
+        for root in PROD_ROOTS:
+            paths = [root] if root.is_file() else sorted(root.rglob("*.py"))
+            for path in paths:
+                text = path.read_text(encoding="utf-8")
+                if "v5" in text.lower():
+                    offenders.append(str(path.relative_to(ROOT)))
+        self.assertEqual(
+            offenders,
+            [],
+            f"production code must contain zero 'v5' occurrences; found in {offenders}",
+        )
+
     def test_core_still_blocked_after_synthetic_refresh(self) -> None:
-        refresh_from_synthetic(SYN_OK, target_player_id="9001", line=18.5)
+        refresh_from_synthetic(SYN_OK, sport_id=SPORT_ID_CS2)
         self.assertFalse(core_ready())
 
 

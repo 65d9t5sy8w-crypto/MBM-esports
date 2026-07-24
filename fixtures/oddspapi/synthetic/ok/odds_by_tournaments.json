@@ -1,0 +1,72 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored v4 odds-by-tournaments shape for unit tests only. Pinnacle moneyline prices only — not a claim of headshot props. Not an OddsPapi response."
+  },
+  "results": [
+    {
+      "fixtureId": "id1700000000001001",
+      "participant1Id": 901,
+      "participant2Id": 902,
+      "participant1Name": "Test Team Alpha",
+      "participant2Name": "Test Team Bravo",
+      "sportId": 17,
+      "tournamentId": 17001,
+      "seasonId": 1,
+      "statusId": 0,
+      "hasOdds": true,
+      "startTime": "2026-07-25T18:00:00.000Z",
+      "trueStartTime": null,
+      "trueEndTime": null,
+      "updatedAt": "2026-07-24T12:00:00.000Z",
+      "bookmakerOdds": {
+        "pinnacle": {
+          "bookmakerIsActive": true,
+          "bookmakerFixtureId": "synthetic-pinnacle-1001",
+          "fixturePath": "https://example.test/pinnacle/synthetic-1001",
+          "markets": {
+            "17101": {
+              "outcomes": {
+                "17101": {
+                  "players": {
+                    "0": {
+                      "active": true,
+                      "betslip": null,
+                      "bookmakerOutcomeId": "home",
+                      "changedAt": "2026-07-24T12:00:00.000Z",
+                      "limit": 1000,
+                      "playerName": null,
+                      "price": 1.91,
+                      "priceAmerican": "-110",
+                      "mainLine": true,
+                      "exchangeMeta": {}
+                    }
+                  }
+                },
+                "17102": {
+                  "players": {
+                    "0": {
+                      "active": true,
+                      "betslip": null,
+                      "bookmakerOutcomeId": "away",
+                      "changedAt": "2026-07-24T12:00:00.000Z",
+                      "limit": 1000,
+                      "playerName": null,
+                      "price": 1.95,
+                      "priceAmerican": "-105",
+                      "mainLine": true,
+                      "exchangeMeta": {}
+                    }
+                  }
+                }
+              },
+              "bookmakerMarketId": "synthetic-moneyline"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

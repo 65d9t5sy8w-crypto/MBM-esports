@@ -1,12 +1,42 @@
-# OddsPapi endpoint contract
+# OddsPapi v4 endpoint contract
 
-Base URL: `https://v5.oddspapi.io/en`
+Base URL: `https://api.oddspapi.io`
 
-Mapped from the public OddsPapi v5 REST docs ([docs.oddspapi.io](https://docs.oddspapi.io/llms.txt)).
-Provider-specific shapes stay in `mbm/providers/oddspapi/`; canonical modules consume
-`EvidenceEnvelope` only.
+Locked MBM integration is **OddsPapi v4 only**. Provider-specific shapes stay in
+`mbm/providers/oddspapi/`; canonical modules consume `EvidenceEnvelope` only.
 
-CS2 sport id: **17** (`ESport Counter-Strike`).
+Adapter class: `OddsPapiV4Adapter`.
+
+## Verified production endpoints
+
+| Purpose | Method | Path | Key query params |
+|---------|--------|------|------------------|
+| Sports catalog | GET | `/v4/sports` | `apiKey` |
+| Tournaments by sport | GET | `/v4/tournaments` | `sportId`, `language`, `apiKey` |
+| Odds by tournaments | GET | `/v4/odds-by-tournaments` | `tournamentIds`, `bookmaker`, `apiKey` |
+
+No other OddsPapi paths are authorized for production intake.
+
+## Verified esports sport IDs
+
+| Title | sportId |
+|-------|--------:|
+| CS2 (ESport Counter-Strike) | 17 |
+| LoL (ESport League of Legends) | 18 |
+| VALORANT | 61 |
+
+The adapter is **not** CS2-only. Callers must pass an explicit verified `sport_id`.
+
+## Unsupported license boundary (OddsPapi v5)
+
+OddsPapi **v5** (`https://v5.oddspapi.io/...`) is **not authorized or verified** for MBM.
+
+A `401 invalid_api_key` (or equivalent) from v5 is an **unsupported license boundary**,
+not a normal runtime fallback. Production code must not call v5 hosts, must not use
+v5 bookmaker/fixtures endpoints, and must not treat v5 as a recovery path.
+
+Documented here for operators only. Remaining production-code occurrence count of
+`v5` must stay **zero**.
 
 ## Client policy
 
@@ -24,29 +54,17 @@ CS2 sport id: **17** (`ESport Counter-Strike`).
 | Kind | Label | Location |
 |------|-------|----------|
 | Hand-authored unit fixtures | `source=synthetic_test_fixture`, `captured_at=null`, `not_for_projection=true` | `fixtures/oddspapi/synthetic/` |
-| Byte-for-byte OddsPapi responses | `source=oddspapi` | `intake/raw/oddspapi/` (or live out dir under `*/oddspapi/`) |
+| Byte-for-byte OddsPapi v4 responses | `source=oddspapi` | `intake/raw/oddspapi/` |
 
 Never label synthetic JSON as OddsPapi recorded evidence.
 
-## Endpoints used by MBM-esports
+## Market evidence rules
 
-| Purpose | Method | Path | Key query params |
-|---------|--------|------|------------------|
-| Sports catalog | GET | `/sports` | — |
-| CS2 tournaments | GET | `/tournaments` | `sportId=17` |
-| CS2 fixtures | GET | `/fixtures` | `sportId=17` (optional `tournamentId`, `bookmakers`) |
-| Fixture odds | GET | `/fixtures/odds` | `fixtureId`, optional `bookmakers`, `mainLine` |
-| Participants | GET | `/participants` | `sportId=17` or `participantIds` |
-| Players | GET | `/players` | `sportId=17` / `participantId` / `playerIds` |
-| Markets catalog | GET | `/markets` | optional filters |
-
-All requests also require `apiKey`.
-
-## Evidence rules
-
-- Preserve raw response bytes beside normalized records **only** for live OddsPapi payloads.
-- Always set ISO-8601 `captured_at` on live OddsPapi evidence.
-- Failures become explicit PASS reasons via the source-attempt ledger (never generic “data unavailable”).
-- OddsPapi supplies **market board / odds**, not CS2 match logs. Headshots gates still need
-  Mason-supplied (or other) Maps 1–2 logs before Core-backed projection.
-- Core eligibility remains BLOCKED until the authentic wheel is vendored.
+- Ingest **Pinnacle market prices** when returned under `bookmakerOdds.pinnacle`.
+- OddsPapi supplies tournament, event, and market-line/price evidence.
+- Player match logs and behavioral telemetry remain Mason-controlled or other specialized providers.
+- **Do not** claim headshot (or other player-prop) availability unless demonstrated by a
+  redacted authentic v4 response fixture.
+- Failures become explicit PASS reasons via the source-attempt ledger (never generic
+  “data unavailable”).
+- Core publication remains blocked until authentic telemetry and evidence gates are satisfied.

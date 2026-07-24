@@ -82,13 +82,15 @@ python scripts/refresh_bo3gg.py --mode synthetic
 python scripts/refresh_oddspapi.py --mode synthetic
 # optional live smoke (honest UA only; stops on non-JSON/non-200):
 # python scripts/refresh_bo3gg.py --mode live
-# ODDSPAPI_API_KEY=... python scripts/refresh_oddspapi.py --mode live
+# ODDSPAPI_API_KEY=... python scripts/refresh_oddspapi.py --mode live --sport cs2
 git diff --check
 git status --short
 ```
 
 BO3 contract: [`docs/BO3GG_ENDPOINT_CONTRACT.md`](docs/BO3GG_ENDPOINT_CONTRACT.md).
-OddsPapi contract: [`docs/ODDSPAPI_ENDPOINT_CONTRACT.md`](docs/ODDSPAPI_ENDPOINT_CONTRACT.md).
+OddsPapi **v4** contract: [`docs/ODDSPAPI_ENDPOINT_CONTRACT.md`](docs/ODDSPAPI_ENDPOINT_CONTRACT.md)
+(`OddsPapiV4Adapter`; `/v4/sports`, `/v4/tournaments`, `/v4/odds-by-tournaments`;
+sport IDs CS2=17, LoL=18, VALORANT=61). OddsPapi v5 is not authorized.
 Synthetic unit fixtures live under `fixtures/bo3gg/synthetic/` and
 `fixtures/oddspapi/synthetic/` and are **not** provider evidence.
 Never commit OddsPapi API keys (`ODDSPAPI_API_KEY`).

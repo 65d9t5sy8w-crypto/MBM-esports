@@ -3,9 +3,9 @@
     "source": "synthetic_test_fixture",
     "captured_at": null,
     "not_for_projection": true,
-    "note": "Synthetic failure case for unit tests. Not an OddsPapi response body."
+    "note": "Synthetic v4 failure case for unit tests. Not an OddsPapi response body."
   },
-  "url": "https://v5.oddspapi.io/en/fixtures?sportId=17&apiKey=REDACTED",
+  "url": "https://api.oddspapi.io/v4/odds-by-tournaments?tournamentIds=17001&bookmaker=pinnacle&apiKey=REDACTED",
   "status": 401,
   "content_type": "application/json",
   "unavailable_reason": "OddsPapi unavailable: HTTP 401 content_type=application/json",

@@ -1,4 +1,12 @@
-"""Honest OddsPapi HTTP client — query apiKey auth, no browser impersonation."""
+"""OddsPapi v4 adapter — authenticated HTTP for verified esports market intake.
+
+Locked production scope (only):
+  GET /v4/sports
+  GET /v4/tournaments
+  GET /v4/odds-by-tournaments
+
+Base host: https://api.oddspapi.io
+"""
 
 from __future__ import annotations
 
@@ -9,14 +17,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from mbm import __version__
 
-BASE_URL = "https://v5.oddspapi.io/en"
+BASE_URL = "https://api.oddspapi.io"
 USER_AGENT = f"MBM-esports/{__version__} (+https://github.com/65d9t5sy8w-crypto/MBM-esports)"
-CS2_SPORT_ID = 17
 API_KEY_ENV = "ODDSPAPI_API_KEY"
+
+# Verified esports sport IDs for MBM OddsPapi v4 intake.
+SPORT_ID_CS2 = 17
+SPORT_ID_LOL = 18
+SPORT_ID_VALORANT = 61
+VERIFIED_ESPORTS_SPORT_IDS: frozenset[int] = frozenset(
+    {SPORT_ID_CS2, SPORT_ID_LOL, SPORT_ID_VALORANT}
+)
 
 _API_KEY_QUERY_RE = re.compile(r"([?&]apiKey=)[^&]*", re.IGNORECASE)
 
@@ -48,8 +63,11 @@ def _is_json_content_type(content_type: str) -> bool:
     return ct in {"application/json", "application/vnd.api+json", "text/json"}
 
 
-class OddsPapiClient:
-    """Synchronous OddsPapi v5 client using stdlib urllib only."""
+class OddsPapiV4Adapter:
+    """Synchronous OddsPapi **v4** adapter using stdlib urllib only.
+
+    Production methods call only the three verified `/v4/` endpoints.
+    """
 
     def __init__(
         self,
@@ -71,6 +89,11 @@ class OddsPapiClient:
         }
 
     def request(self, path: str, params: Mapping[str, Any] | None = None) -> OddsPapiHttpResult:
+        if not path.startswith("/v4/"):
+            raise ValueError(
+                f"OddsPapiV4Adapter refuses non-v4 path {path!r}; "
+                "only /v4/sports, /v4/tournaments, /v4/odds-by-tournaments are authorized"
+            )
         if not self.api_key:
             return OddsPapiHttpResult(
                 ok=False,
@@ -173,69 +196,39 @@ class OddsPapiClient:
         )
 
     def sports(self) -> OddsPapiHttpResult:
-        return self.request("/sports")
+        return self.request("/v4/sports")
 
-    def tournaments(self, *, sport_id: int = CS2_SPORT_ID) -> OddsPapiHttpResult:
-        return self.request("/tournaments", {"sportId": sport_id})
+    def tournaments(self, *, sport_id: int) -> OddsPapiHttpResult:
+        if sport_id not in VERIFIED_ESPORTS_SPORT_IDS:
+            raise ValueError(
+                f"sport_id={sport_id} is outside verified MBM esports set "
+                f"{sorted(VERIFIED_ESPORTS_SPORT_IDS)}"
+            )
+        return self.request("/v4/tournaments", {"sportId": sport_id, "language": "en"})
 
-    def fixtures(
+    def odds_by_tournaments(
         self,
+        tournament_ids: Sequence[int | str],
         *,
-        sport_id: int = CS2_SPORT_ID,
-        tournament_id: int | None = None,
-        fixture_ids: str | None = None,
-        bookmakers: str | None = None,
+        bookmaker: str = "pinnacle",
+        language: str = "en",
+        verbosity: int = 3,
+        odds_format: str = "decimal",
     ) -> OddsPapiHttpResult:
-        params: dict[str, Any] = {}
-        if fixture_ids:
-            params["fixtureIds"] = fixture_ids
-        else:
-            params["sportId"] = sport_id
-            if tournament_id is not None:
-                params["tournamentId"] = tournament_id
-        if bookmakers is not None:
-            params["bookmakers"] = bookmakers
-        return self.request("/fixtures", params)
+        ids = [str(t).strip() for t in tournament_ids if str(t).strip()]
+        if not ids:
+            raise ValueError("odds_by_tournaments requires at least one tournament id")
+        params: dict[str, Any] = {
+            "tournamentIds": ",".join(ids),
+            "language": language,
+            "verbosity": verbosity,
+            "oddsFormat": odds_format,
+        }
+        if bookmaker:
+            # Verified docs overview uses singular `bookmaker`.
+            params["bookmaker"] = bookmaker
+        return self.request("/v4/odds-by-tournaments", params)
 
-    def fixture_odds(
-        self,
-        fixture_id: str,
-        *,
-        bookmakers: str | None = "pinnacle",
-        main_line: bool | None = True,
-    ) -> OddsPapiHttpResult:
-        params: dict[str, Any] = {"fixtureId": fixture_id}
-        if bookmakers is not None:
-            params["bookmakers"] = bookmakers
-        if main_line is not None:
-            params["mainLine"] = str(main_line).lower()
-        return self.request("/fixtures/odds", params)
 
-    def participants(
-        self,
-        *,
-        sport_id: int = CS2_SPORT_ID,
-        participant_ids: str | None = None,
-    ) -> OddsPapiHttpResult:
-        params: dict[str, Any] = {}
-        if participant_ids:
-            params["participantIds"] = participant_ids
-        else:
-            params["sportId"] = sport_id
-        return self.request("/participants", params)
-
-    def players(
-        self,
-        *,
-        sport_id: int = CS2_SPORT_ID,
-        player_ids: str | None = None,
-        participant_id: int | None = None,
-    ) -> OddsPapiHttpResult:
-        params: dict[str, Any] = {}
-        if player_ids:
-            params["playerIds"] = player_ids
-        elif participant_id is not None:
-            params["participantId"] = participant_id
-        else:
-            params["sportId"] = sport_id
-        return self.request("/players", params)
+# Back-compat alias during rename; prefer OddsPapiV4Adapter.
+OddsPapiClient = OddsPapiV4Adapter

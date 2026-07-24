@@ -10,9 +10,13 @@ from mbm.providers.oddspapi.client import (
     API_KEY_ENV as ODDSPAPI_API_KEY_ENV,
 )
 from mbm.providers.oddspapi.client import (
-    CS2_SPORT_ID as ODDSPAPI_CS2_SPORT_ID,
+    SPORT_ID_CS2,
+    SPORT_ID_LOL,
+    SPORT_ID_VALORANT,
+    VERIFIED_ESPORTS_SPORT_IDS,
+    OddsPapiHttpResult,
+    OddsPapiV4Adapter,
 )
-from mbm.providers.oddspapi.client import OddsPapiClient, OddsPapiHttpResult
 from mbm.providers.oddspapi.normalize import normalize_oddspapi_bundle
 from mbm.providers.oddspapi.pipeline import (
     refresh_from_synthetic as refresh_oddspapi_from_synthetic,
@@ -34,10 +38,13 @@ __all__ = [
     "refresh_live_smoke",
     "refresh_bo3_from_synthetic",
     "refresh_bo3_live_smoke",
-    "OddsPapiClient",
+    "OddsPapiV4Adapter",
     "OddsPapiHttpResult",
     "ODDSPAPI_API_KEY_ENV",
-    "ODDSPAPI_CS2_SPORT_ID",
+    "SPORT_ID_CS2",
+    "SPORT_ID_LOL",
+    "SPORT_ID_VALORANT",
+    "VERIFIED_ESPORTS_SPORT_IDS",
     "normalize_oddspapi_bundle",
     "refresh_oddspapi_from_synthetic",
     "refresh_oddspapi_live_smoke",

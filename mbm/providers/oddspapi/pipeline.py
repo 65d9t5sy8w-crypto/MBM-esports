@@ -1,15 +1,20 @@
-"""OddsPapi refresh pipeline: preserve raw only for live calls; synthetic stays labeled."""
+"""OddsPapi v4 refresh pipeline: live raw only for verified /v4 endpoints."""
 
 from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from mbm.intake.raw.store import RawStore
 from mbm.intake.types import EvidenceEnvelope
-from mbm.providers.oddspapi.client import OddsPapiClient, OddsPapiHttpResult, redact_api_key
+from mbm.providers.oddspapi.client import (
+    SPORT_ID_CS2,
+    OddsPapiHttpResult,
+    OddsPapiV4Adapter,
+    redact_api_key,
+)
 from mbm.providers.oddspapi.normalize import normalize_oddspapi_bundle, unavailable_envelope
 
 SYNTHETIC_SOURCE = "synthetic_test_fixture"
@@ -31,7 +36,7 @@ def _meta(result: OddsPapiHttpResult, endpoint: str) -> dict[str, Any]:
 
 
 def _write_live_raw(store: RawStore, event_key: str, name: str, result: OddsPapiHttpResult) -> str:
-    """Persist byte-for-byte live OddsPapi outcome under intake/raw/oddspapi only."""
+    """Persist byte-for-byte live OddsPapi v4 outcome under intake/raw/oddspapi only."""
     record = store.write(
         event_key,
         {
@@ -62,6 +67,7 @@ def refresh_from_synthetic(
     out_dir: Path | None = None,
     target_player_id: str | None = None,
     line: float | None = None,
+    sport_id: int | None = None,
 ) -> EvidenceEnvelope:
     """Build envelope from hand-authored synthetic fixtures (unit tests only).
 
@@ -76,17 +82,12 @@ def refresh_from_synthetic(
     mapping = {
         "sports.json": "sports",
         "tournaments.json": "tournaments",
-        "fixtures.json": "fixtures",
-        "fixture_odds.json": "fixture_odds",
-        "participants.json": "participants",
-        "players.json": "players",
-        "markets.json": "markets",
+        "odds_by_tournaments.json": "odds_by_tournaments",
     }
     for filename, key in mapping.items():
         path = synthetic_dir / filename
         if not path.is_file():
-            # Optional endpoints may be absent; only fixtures/odds are critical.
-            if key in {"fixtures", "fixture_odds"}:
+            if key == "odds_by_tournaments":
                 bundle["http_meta"].append(
                     {
                         "endpoint": key,
@@ -94,7 +95,7 @@ def refresh_from_synthetic(
                         "content_type": "",
                         "unavailable_reason": (
                             f"synthetic fixture missing ({filename}); "
-                            "not an OddsPapi response"
+                            "not an OddsPapi v4 response"
                         ),
                     }
                 )
@@ -112,7 +113,7 @@ def refresh_from_synthetic(
             raise ValueError(f"{path} synthetic captured_at must be null")
 
         body = _strip_fixture_meta(payload)
-        # Synthetic HTTP-wrapper failure case (e.g. 401).
+        # Synthetic HTTP-wrapper failure case (e.g. 401 on v4).
         if isinstance(body, dict) and "status" in body and "body" in body and "content_type" in body:
             status = int(body.get("status") or 0)
             content_type = str(body.get("content_type") or "")
@@ -130,6 +131,14 @@ def refresh_from_synthetic(
                 }
             )
             continue
+
+        # sports/tournaments may be a bare array at top level after meta strip,
+        # or wrapped {"results": [...]} / single object.
+        if key in {"sports", "tournaments", "odds_by_tournaments"} and isinstance(body, dict):
+            if "results" in body:
+                body = body["results"]
+            elif key == "sports" and "sportId" in body:
+                body = [body]
 
         bundle["http_meta"].append(
             {
@@ -151,6 +160,7 @@ def refresh_from_synthetic(
         force_source=SYNTHETIC_SOURCE,
         not_for_projection=True,
         captured_at_display=None,
+        sport_id=sport_id,
     )
     if out_dir is not None:
         dest = out_dir / "synthetic_out" / env.fixture.event_id
@@ -161,18 +171,35 @@ def refresh_from_synthetic(
     return env
 
 
+def _tournament_ids_from_payload(payload: Any, *, limit: int = 5) -> list[str]:
+    ids: list[str] = []
+    rows = payload if isinstance(payload, list) else []
+    if isinstance(payload, dict):
+        rows = payload.get("results") or payload.get("data") or []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        tid = row.get("tournamentId") or row.get("id")
+        if tid is None:
+            continue
+        ids.append(str(tid))
+        if len(ids) >= limit:
+            break
+    return ids
+
+
 def refresh_live_smoke(
-    client: OddsPapiClient,
+    client: OddsPapiV4Adapter,
     *,
     out_dir: Path,
-    tournament_id: int | None = None,
-    bookmakers: str = "pinnacle",
+    sport_id: int = SPORT_ID_CS2,
+    tournament_ids: Sequence[int | str] | None = None,
+    bookmaker: str = "pinnacle",
 ) -> EvidenceEnvelope:
-    """One-shot live smoke against OddsPapi v5. No browser impersonation. No retries.
+    """One-shot live smoke against OddsPapi **v4**. No browser impersonation. No retries.
 
-    Requires apiKey via client / ODDSPAPI_API_KEY. Live raw bytes go under out_dir
-    (intended: intake/raw/oddspapi). Failures become explicit OddsPapi unavailable
-    PASS reasons. API keys are redacted from stored URLs.
+    Requires apiKey via client / ODDSPAPI_API_KEY. Calls only:
+      /v4/sports, /v4/tournaments, /v4/odds-by-tournaments
     """
     captured = _iso_now()
     store = RawStore(out_dir / "oddspapi")
@@ -181,24 +208,27 @@ def refresh_live_smoke(
         "source": ODDSPAPI_SOURCE,
         "captured_at": captured,
         "not_for_projection": False,
+        "sport_id": sport_id,
         "http_meta": [],
     }
 
-    tournaments = client.tournaments()
+    sports = client.sports()
+    bundle["http_meta"].append(_meta(sports, "sports"))
+    _write_live_raw(store, event_key, "sports", sports)
+    if sports.available:
+        bundle["sports"] = sports.json_body
+
+    tournaments = client.tournaments(sport_id=sport_id)
     bundle["http_meta"].append(_meta(tournaments, "tournaments"))
     _write_live_raw(store, event_key, "tournaments", tournaments)
-    if tournaments.available:
-        bundle["tournaments"] = tournaments.json_body
-
-    fixtures = client.fixtures(tournament_id=tournament_id, bookmakers=bookmakers)
-    bundle["http_meta"].append(_meta(fixtures, "fixtures"))
-    _write_live_raw(store, event_key, "fixtures", fixtures)
-    if not fixtures.available:
-        assert fixtures.unavailable_reason is not None
+    if not tournaments.available:
+        assert tournaments.unavailable_reason is not None
         env = unavailable_envelope(
-            fixtures.unavailable_reason,
+            tournaments.unavailable_reason,
             captured_at=captured,
-            raw_ref=str((out_dir / "oddspapi" / event_key / "raw" / "fixtures.json").as_posix()),
+            raw_ref=str(
+                (out_dir / "oddspapi" / event_key / "raw" / "tournaments.json").as_posix()
+            ),
         )
         dest = out_dir / env.fixture.event_id
         dest.mkdir(parents=True, exist_ok=True)
@@ -207,21 +237,44 @@ def refresh_live_smoke(
         )
         return env
 
-    bundle["fixtures"] = fixtures.json_body
-    rows = fixtures.json_body if isinstance(fixtures.json_body, list) else []
-    first = rows[0] if rows and isinstance(rows[0], dict) else None
-    if first is None and isinstance(fixtures.json_body, dict):
-        arr = fixtures.json_body.get("data") or fixtures.json_body.get("fixtures") or []
-        if isinstance(arr, list) and arr and isinstance(arr[0], dict):
-            first = arr[0]
+    bundle["tournaments"] = tournaments.json_body
+    ids = [str(t) for t in tournament_ids] if tournament_ids else _tournament_ids_from_payload(
+        tournaments.json_body
+    )
+    if not ids:
+        env = unavailable_envelope(
+            "OddsPapi unavailable: tournaments response contained no tournamentId values",
+            captured_at=captured,
+        )
+        dest = out_dir / env.fixture.event_id
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "normalized.json").write_text(
+            json.dumps(env.to_dict(), indent=2, default=str), encoding="utf-8"
+        )
+        return env
 
-    if isinstance(first, dict) and first.get("fixtureId"):
-        odds = client.fixture_odds(str(first["fixtureId"]), bookmakers=bookmakers)
-        bundle["http_meta"].append(_meta(odds, "fixture_odds"))
-        _write_live_raw(store, event_key, "fixture_odds", odds)
-        if odds.available:
-            bundle["fixture_odds"] = odds.json_body
+    odds = client.odds_by_tournaments(ids, bookmaker=bookmaker)
+    bundle["http_meta"].append(_meta(odds, "odds_by_tournaments"))
+    _write_live_raw(store, event_key, "odds_by_tournaments", odds)
+    if not odds.available:
+        assert odds.unavailable_reason is not None
+        env = unavailable_envelope(
+            odds.unavailable_reason,
+            captured_at=captured,
+            raw_ref=str(
+                (
+                    out_dir / "oddspapi" / event_key / "raw" / "odds_by_tournaments.json"
+                ).as_posix()
+            ),
+        )
+        dest = out_dir / env.fixture.event_id
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "normalized.json").write_text(
+            json.dumps(env.to_dict(), indent=2, default=str), encoding="utf-8"
+        )
+        return env
 
+    bundle["odds_by_tournaments"] = odds.json_body
     raw = store.write(event_key, bundle, filename="bundle.json")
     env = normalize_oddspapi_bundle(
         bundle,
@@ -229,6 +282,7 @@ def refresh_live_smoke(
         raw_ref=str(raw.path.as_posix()),
         force_source=ODDSPAPI_SOURCE,
         not_for_projection=False,
+        sport_id=sport_id,
     )
     dest = out_dir / env.fixture.event_id
     dest.mkdir(parents=True, exist_ok=True)
