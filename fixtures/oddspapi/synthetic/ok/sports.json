@@ -1,0 +1,11 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored shape for unit tests only. Not an OddsPapi response."
+  },
+  "sportId": 17,
+  "slug": "counter-strike",
+  "sportName": "ESport Counter-Strike"
+}

@@ -79,14 +79,19 @@ python -m unittest discover -s tests -p "test_*.py" -v
 python scripts/report_status.py
 python scripts/run_dashboard.py
 python scripts/refresh_bo3gg.py --mode synthetic
+python scripts/refresh_oddspapi.py --mode synthetic
 # optional live smoke (honest UA only; stops on non-JSON/non-200):
 # python scripts/refresh_bo3gg.py --mode live
+# ODDSPAPI_API_KEY=... python scripts/refresh_oddspapi.py --mode live
 git diff --check
 git status --short
 ```
 
 BO3 contract: [`docs/BO3GG_ENDPOINT_CONTRACT.md`](docs/BO3GG_ENDPOINT_CONTRACT.md).
-Synthetic unit fixtures live under `fixtures/bo3gg/synthetic/` and are **not** provider evidence.
+OddsPapi contract: [`docs/ODDSPAPI_ENDPOINT_CONTRACT.md`](docs/ODDSPAPI_ENDPOINT_CONTRACT.md).
+Synthetic unit fixtures live under `fixtures/bo3gg/synthetic/` and
+`fixtures/oddspapi/synthetic/` and are **not** provider evidence.
+Never commit OddsPapi API keys (`ODDSPAPI_API_KEY`).
 
 ## First live fixture — fields Mason must supply
 

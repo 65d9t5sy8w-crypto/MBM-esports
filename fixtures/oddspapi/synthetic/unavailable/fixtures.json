@@ -1,0 +1,13 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Synthetic failure case for unit tests. Not an OddsPapi response body."
+  },
+  "url": "https://v5.oddspapi.io/en/fixtures?sportId=17&apiKey=REDACTED",
+  "status": 401,
+  "content_type": "application/json",
+  "unavailable_reason": "OddsPapi unavailable: HTTP 401 content_type=application/json",
+  "body": "{\"error\":401,\"message\":\"invalid apiKey\",\"reason\":\"invalid_api_key\"}"
+}

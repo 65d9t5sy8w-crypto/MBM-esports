@@ -1,0 +1,25 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored shape for unit tests only. Not an OddsPapi response."
+  },
+  "results": [
+    {
+      "playerId": 9001,
+      "playerName": "player_one",
+      "participantId": 901
+    },
+    {
+      "playerId": 9002,
+      "playerName": "player_two",
+      "participantId": 901
+    },
+    {
+      "playerId": 9006,
+      "playerName": "player_six",
+      "participantId": 902
+    }
+  ]
+}
