@@ -1,0 +1,12 @@
+MBM_CORE_DEPENDENCY_BLOCKED
+
+Reason: authentic v0.1.0 wheel not supplied to this workspace.
+Expected: mbm_core-0.1.0-py3-none-any.whl
+SHA-256: d151b045fcfa9dd5225cd040740a5f246772bb14ceae5f10c16ff5b3fbf20151
+Commit:  5d3c2e7892812858154061c199818ff91ab43f07
+
+Supply path: private GitHub Release Assets OR successful v0.1.0 Release Actions
+artifact (whichever contains the authentic wheel).
+
+Unauthenticated GitHub 404s must not be treated as proof that the private
+release is missing. Do not invent a replacement wheel.

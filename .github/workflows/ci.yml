@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [MBM, main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package (Core dependency remains blocked until wheel arrives)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Assert Core wheel not fabricated in CI without pin file
+        run: |
+          if [ -f vendor/mbm-core/mbm_core-0.1.0-py3-none-any.whl ]; then
+            echo "Wheel present — verifying SHA-256"
+            echo "d151b045fcfa9dd5225cd040740a5f246772bb14ceae5f10c16ff5b3fbf20151  vendor/mbm-core/mbm_core-0.1.0-py3-none-any.whl" \
+              | sha256sum -c -
+          else
+            echo "Core dependency BLOCKED (expected until Mason vendors authentic wheel)"
+            test -f vendor/mbm-core/BLOCKED
+          fi
+
+      - name: Unit tests + status classification
+        run: |
+          python scripts/report_status.py
+          echo "Intake may pass while Core is blocked; Core skips do not count as acceptance."
+
+      - name: Whitespace hygiene
+        run: git diff --check

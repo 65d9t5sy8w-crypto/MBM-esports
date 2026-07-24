@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+mbm_esports.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local artifacts
+*.zip
+_build_mbm_core/
+artifacts/
+
+# Do not commit unverified Core substitutes.
+# Only the authentic checksum-pinned wheel may live under vendor/mbm-core/.
+vendor/mbm-core/*.whl.bak

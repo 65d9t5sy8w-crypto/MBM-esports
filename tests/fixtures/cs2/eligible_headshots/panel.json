@@ -1,0 +1,21 @@
+{
+  "match_id": "mbm-cs2-fixture-eligible-001",
+  "market": "cs2.maps_1_2.headshots",
+  "map_window": {
+    "start_map": 1,
+    "end_map": 2
+  },
+  "line": 20.5,
+  "approved_for_publication": true,
+  "features": {
+    "team_a_avg_hs_maps_1_2": 24.0,
+    "team_b_avg_hs_maps_1_2": 21.1,
+    "combined_pace_factor": 1.03,
+    "sample_matches": 10,
+    "map_pool": [
+      "mirage",
+      "inferno"
+    ],
+    "source": "fixtures/cs2/eligible_headshots/normalized.json"
+  }
+}

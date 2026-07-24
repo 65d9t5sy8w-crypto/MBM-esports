@@ -1,0 +1,248 @@
+{
+  "source": "manual-fixture-drop",
+  "captured_at": "2026-07-23T18:00:00Z",
+  "fixture": {
+    "event_id": "mbm-cs2-unresolved-001",
+    "team_a": "TeamA",
+    "team_b": "TeamB",
+    "start_time": "2026-07-24T16:00:00+00:00",
+    "format": "bo3",
+    "market_scope": "maps_1_2"
+  },
+  "players": [],
+  "match_logs": [
+    {
+      "match_id": "hist-01",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-02",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-03",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-04",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-05",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-06",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-07",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-08",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-09",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    },
+    {
+      "match_id": "hist-10",
+      "market_scope": "maps_1_2",
+      "kills": 52,
+      "deaths": 18,
+      "assists": 4,
+      "headshots": 24,
+      "opening_kills": 1,
+      "opening_deaths": 1,
+      "rounds_played": 24,
+      "ct_rounds": 12,
+      "t_rounds": 12,
+      "economy": [
+        "pistol",
+        "eco",
+        "anti_eco",
+        "force_buy",
+        "full_buy"
+      ]
+    }
+  ],
+  "map_context": {
+    "map_pool": [
+      "mirage",
+      "inferno",
+      "nuke"
+    ],
+    "veto": [
+      "ban-overpass",
+      "ban-ancient"
+    ],
+    "mr12": true,
+    "side_bias": {
+      "ct": 0.51,
+      "t": 0.49
+    }
+  },
+  "market_lines": [
+    {
+      "player_id": "p-missing",
+      "stat": "headshots",
+      "line": 20.5,
+      "market_scope": "maps_1_2"
+    }
+  ],
+  "evidence_status": "verified",
+  "target_player_id": "p-missing",
+  "source_attempts": [
+    {
+      "source": "manual-fixture-drop",
+      "outcome": "accepted",
+      "detail": "recorded fixture"
+    }
+  ]
+}
