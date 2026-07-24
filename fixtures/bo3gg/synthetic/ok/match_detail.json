@@ -1,0 +1,39 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored shape for unit tests only. Not a BO3.gg response."
+  },
+  "id": 10001,
+  "slug": "test-team-alpha-vs-test-team-bravo-10001",
+  "status": "upcoming",
+  "start_date": "2026-07-25T18:00:00Z",
+  "best_of": 3,
+  "teams": [
+    {
+      "id": 11,
+      "name": "Test Team Alpha",
+      "players": [
+        {"id": "p1", "nickname": "player_one"},
+        {"id": "p2", "nickname": "player_two"},
+        {"id": "p3", "nickname": "player_three"},
+        {"id": "p4", "nickname": "player_four"},
+        {"id": "p5", "nickname": "player_five"}
+      ]
+    },
+    {
+      "id": 22,
+      "name": "Test Team Bravo",
+      "players": [
+        {"id": "p6", "nickname": "player_six"},
+        {"id": "p7", "nickname": "player_seven"},
+        {"id": "p8", "nickname": "player_eight"},
+        {"id": "p9", "nickname": "player_nine"},
+        {"id": "p10", "nickname": "player_ten"}
+      ]
+    }
+  ],
+  "tournament": {"name": "Synthetic Test Cup"},
+  "games": [{"map": "map_a"}, {"map": "map_b"}]
+}

@@ -1,0 +1,20 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored shape for unit tests only. Not a BO3.gg response."
+  },
+  "results": [
+    {"id": "h1", "stats": {"kills": 40, "deaths": 30, "assists": 5, "headshots": 18, "rounds": 42}},
+    {"id": "h2", "stats": {"kills": 38, "deaths": 28, "assists": 6, "headshots": 17, "rounds": 40}},
+    {"id": "h3", "stats": {"kills": 42, "deaths": 31, "assists": 4, "headshots": 19, "rounds": 44}},
+    {"id": "h4", "stats": {"kills": 36, "deaths": 29, "assists": 7, "headshots": 16, "rounds": 39}},
+    {"id": "h5", "stats": {"kills": 41, "deaths": 27, "assists": 5, "headshots": 20, "rounds": 43}},
+    {"id": "h6", "stats": {"kills": 39, "deaths": 32, "assists": 3, "headshots": 18, "rounds": 41}},
+    {"id": "h7", "stats": {"kills": 37, "deaths": 30, "assists": 8, "headshots": 15, "rounds": 40}},
+    {"id": "h8", "stats": {"kills": 43, "deaths": 26, "assists": 4, "headshots": 21, "rounds": 45}},
+    {"id": "h9", "stats": {"kills": 35, "deaths": 33, "assists": 6, "headshots": 14, "rounds": 38}},
+    {"id": "h10", "stats": {"kills": 40, "deaths": 29, "assists": 5, "headshots": 19, "rounds": 42}}
+  ]
+}

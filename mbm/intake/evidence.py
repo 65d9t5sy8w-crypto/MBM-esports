@@ -102,6 +102,11 @@ def assess_evidence(
     reasons: list[str] = []
     status = envelope.evidence_status
 
+    # Surface provider unavailability on the PASS decision itself (not only the ledger).
+    for a in attempts:
+        if a.outcome == "unavailable" and a.detail and a.detail not in reasons:
+            reasons.append(a.detail)
+
     if envelope.identity_status is not IdentityStatus.RESOLVED:
         reasons.append("identity unresolved before scoring")
 

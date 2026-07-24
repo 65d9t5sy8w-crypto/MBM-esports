@@ -1,0 +1,13 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Synthetic failure case for unit tests. Not a BO3.gg response body."
+  },
+  "url": "https://api.bo3.gg/api/v1/matches",
+  "status": 403,
+  "content_type": "text/html; charset=utf-8",
+  "unavailable_reason": "BO3 unavailable: HTTP 403 content_type=text/html; charset=utf-8",
+  "body": "<html>forbidden</html>"
+}

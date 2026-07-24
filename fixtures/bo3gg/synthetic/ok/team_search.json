@@ -1,0 +1,9 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored shape for unit tests only. Not a BO3.gg response."
+  },
+  "results": [{"id": 11, "name": "Test Team Alpha"}]
+}
