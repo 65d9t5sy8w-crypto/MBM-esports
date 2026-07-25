@@ -1,0 +1,34 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true
+  },
+  "data": [
+    {
+      "type": "projection",
+      "id": "pp-cs2-2",
+      "attributes": {
+        "line_score": 19.5,
+        "stat_type": "Headshots",
+        "start_time": "2026-07-24T20:00:00Z"
+      },
+      "relationships": {
+        "new_player": { "data": { "type": "new_player", "id": "player-101" } },
+        "league": { "data": { "type": "league", "id": "league-cs2" } }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "new_player",
+      "id": "player-101",
+      "attributes": { "name": "player_one", "team_name": "Test Team Alpha" }
+    },
+    {
+      "type": "league",
+      "id": "league-cs2",
+      "attributes": { "name": "CS2" }
+    }
+  ]
+}

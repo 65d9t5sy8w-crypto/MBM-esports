@@ -83,6 +83,8 @@ python scripts/refresh_oddspapi.py --mode synthetic
 # optional live smoke (honest UA only; stops on non-JSON/non-200):
 # python scripts/refresh_bo3gg.py --mode live
 # ODDSPAPI_API_KEY=... python scripts/refresh_oddspapi.py --mode live --sport cs2
+# PrizePicks browser-bridge capture API (no scoring; no server-side PP fetch):
+# python scripts/run_prizepicks_live.py
 git diff --check
 git status --short
 ```
@@ -94,6 +96,18 @@ sport IDs CS2=17, LoL=18, VALORANT=61). OddsPapi v5 is not authorized.
 Synthetic unit fixtures live under `fixtures/bo3gg/synthetic/` and
 `fixtures/oddspapi/synthetic/` and are **not** provider evidence.
 Never commit OddsPapi API keys (`ODDSPAPI_API_KEY`).
+
+PrizePicks capture: [`docs/MBM_PRIZEPICKS_ENDPOINT_CURSOR_DROP.md`](docs/MBM_PRIZEPICKS_ENDPOINT_CURSOR_DROP.md).
+Browser bridge posts response JSON only to `POST /api/live/prizepicks/capture-board`
+(`scoring_touched: false`). Synthetic fixtures under `fixtures/prizepicks/synthetic/`
+are **not** recorded PrizePicks evidence.
+
+Browser bridge (Tampermonkey): [`browser/prizepicks_bridge.user.js`](browser/prizepicks_bridge.user.js) —
+see [`browser/README.md`](browser/README.md). Smoke:
+
+```bash
+python scripts/smoke_prizepicks_bridge.py
+```
 
 ## First live fixture — fields Mason must supply
 

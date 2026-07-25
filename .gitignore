@@ -28,6 +28,7 @@ _build_mbm_core/
 artifacts/
 intake/raw/bo3gg/
 intake/raw/oddspapi/
+intake/raw/prizepicks/
 fixtures/**/synthetic_out/
 
 # Do not commit unverified Core substitutes.
