@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,6 +27,11 @@ def main() -> int:
         default=ROOT / "fixtures" / "cs2",
         help="Directory of recorded CS2 evidence fixtures",
     )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Do not open the board URL in a browser",
+    )
     args = parser.parse_args()
 
     now = datetime(2026, 7, 23, 20, 0, 0, tzinfo=timezone.utc)
@@ -39,13 +45,21 @@ def main() -> int:
         data_label="fixture/demo",
         now=now,
     )
-    server = serve_dashboard(snapshot, host=args.host, port=args.port)
-    print(f"MBM Esports analyst dashboard")
-    print(f"  URL:   http://{args.host}:{args.port}/")
-    print(f"  Data:  {snapshot.data_label}")
-    print(f"  Core:  {snapshot.core_status}")
-    print(f"  Board: {len(snapshot.board)} picks")
-    print("Press Ctrl+C to stop.")
+    try:
+        server = serve_dashboard(snapshot, host=args.host, port=args.port)
+    except OSError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    url = f"http://{args.host}:{args.port}/"
+    print("MBM Esports analyst dashboard", flush=True)
+    print(f"  URL:   {url}", flush=True)
+    print(f"  Data:  {snapshot.data_label}", flush=True)
+    print(f"  Core:  {snapshot.core_status}", flush=True)
+    print(f"  Board: {len(snapshot.board)} picks", flush=True)
+    print("Press Ctrl+C to stop.", flush=True)
+    if not args.no_open:
+        webbrowser.open(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

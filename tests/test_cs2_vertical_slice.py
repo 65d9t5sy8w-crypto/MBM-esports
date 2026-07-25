@@ -11,8 +11,10 @@ from pathlib import Path
 
 from mbm.behavioral.adapters.cs2.projection import (
     ALLOWED_ACTIONS,
+    CORE_DISTRIBUTION_UNAVAILABLE,
     CORE_WHEEL,
     EXPECTED_CORE_SHA256,
+    MISSING_PLAYER_LEVEL_CORE_INPUTS,
     CoreDependencyBlocked,
     core_ready,
     core_wheel_present,
@@ -78,12 +80,14 @@ class TestCs2VerticalSliceWithCore(unittest.TestCase):
         result = project_maps_1_2_headshots(self.panel)
         self.assertIsNotNone(result)
 
-    def test_valid_probability_distribution(self) -> None:
+    def test_no_fabricated_probability_distribution(self) -> None:
+        """Core v0.1.0 has no calibrated action mass; probabilities stay empty."""
         result = project_maps_1_2_headshots(self.panel)
-        probs = result.probabilities
-        self.assertEqual(set(probs), ALLOWED_ACTIONS)
-        self.assertTrue(all(v >= 0 for v in probs.values()))
-        self.assertAlmostEqual(sum(probs.values()), 1.0, places=9)
+        self.assertEqual(result.probabilities, {})
+        self.assertIn(
+            result.decision.reason,
+            {MISSING_PLAYER_LEVEL_CORE_INPUTS, CORE_DISTRIBUTION_UNAVAILABLE},
+        )
 
     def test_complete_feature_provenance(self) -> None:
         result = project_maps_1_2_headshots(self.panel)
@@ -93,12 +97,42 @@ class TestCs2VerticalSliceWithCore(unittest.TestCase):
         for key in self.panel.features:
             self.assertIn(key, names)
 
-    def test_publication_decision_eligible(self) -> None:
+    def test_publication_decision_fail_closed_without_core_distribution(self) -> None:
         result = project_maps_1_2_headshots(self.panel)
         decision = result.decision
-        self.assertTrue(decision.eligible)
-        self.assertIn(decision.action, ALLOWED_ACTIONS)
+        self.assertFalse(decision.eligible)
+        self.assertEqual(decision.action, "PASS")
         self.assertNotEqual(decision.action, "WATCHLIST")
+        # Fixture supplies team averages only — not player-level Core inputs.
+        self.assertEqual(decision.reason, MISSING_PLAYER_LEVEL_CORE_INPUTS)
+        names = {item.name for item in result.provenance}
+        self.assertIn("missing_player_level_core_inputs", names)
+        self.assertIn("refused_team_average_as_kill_share", names)
+
+    def test_player_inputs_still_fail_closed_without_core_distribution(self) -> None:
+        payload = {
+            "match_id": self.panel.match_id,
+            "market": self.panel.market.value,
+            "map_window": {
+                "start_map": self.panel.map_window.start_map,
+                "end_map": self.panel.map_window.end_map,
+            },
+            "line": self.panel.line,
+            "approved_for_publication": True,
+            "features": {
+                **self.panel.features,
+                "kill_share": 0.55,
+                "stability": 85.0,
+                "eco_dependency": 0.05,
+            },
+        }
+        panel = CS2HeadshotsPanel.from_dict(payload)
+        result = project_maps_1_2_headshots(panel)
+        self.assertEqual(result.probabilities, {})
+        self.assertFalse(result.decision.eligible)
+        self.assertEqual(result.decision.reason, CORE_DISTRIBUTION_UNAVAILABLE)
+        self.assertTrue(result.scores)
+        self.assertTrue(result.core_label)
 
 
 if __name__ == "__main__":

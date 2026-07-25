@@ -6,6 +6,7 @@ import ast
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from mbm.analyst.assembly import build_dashboard_snapshot
 from mbm.analyst.cs2_bridge import decide_headshots
@@ -16,6 +17,11 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "fixtures" / "cs2"
 NOW = datetime(2026, 7, 23, 20, 0, 0, tzinfo=timezone.utc)
 DASHBOARD_DIR = ROOT / "mbm" / "dashboard"
+BLOCKED_STATUS = (
+    "Core BLOCKED until the authentic v0.1.0 wheel is supplied "
+    "(private GitHub Release Assets or successful v0.1.0 Release Actions artifact)"
+)
+READY_STATUS = "Core READY (authentic v0.1.0 wheel verified)"
 
 
 def _snapshot():
@@ -56,12 +62,29 @@ class TestBoardAssembly(unittest.TestCase):
         self.assertIn(row.recommendation, {"OVER", "UNDER", "PASS"})
 
     def test_core_blocked_means_not_eligible(self) -> None:
-        snap = _snapshot()
+        with (
+            patch("mbm.analyst.assembly.core_ready", return_value=False),
+            patch("mbm.analyst.assembly.core_status_message", return_value=BLOCKED_STATUS),
+        ):
+            snap = _snapshot()
         self.assertFalse(snap.core_ready)
         self.assertIn("BLOCKED", snap.core_status)
         for row in snap.board:
             self.assertFalse(row.eligible)
             self.assertIn("Core BLOCKED", row.eligibility_reason)
+
+    def test_core_ready_allows_eligible_fixture(self) -> None:
+        with (
+            patch("mbm.analyst.assembly.core_ready", return_value=True),
+            patch("mbm.analyst.assembly.core_status_message", return_value=READY_STATUS),
+        ):
+            snap = _snapshot()
+        self.assertTrue(snap.core_ready)
+        self.assertIn("READY", snap.core_status)
+        eligible_rows = [r for r in snap.board if r.event_id == "mbm-cs2-fixture-eligible-001"]
+        self.assertEqual(len(eligible_rows), 1)
+        self.assertTrue(eligible_rows[0].eligible)
+        self.assertNotIn("Core BLOCKED", eligible_rows[0].eligibility_reason)
 
     def test_pass_rows_render_explicit_reason(self) -> None:
         snap = _snapshot()
@@ -87,12 +110,28 @@ class TestBoardAssembly(unittest.TestCase):
         self.assertIn("Raw evidence references", html)
         self.assertIn("Headshots gates", html)
 
-    def test_board_html_shows_core_banner_and_fixture(self) -> None:
-        snap = _snapshot()
+    def test_board_html_shows_core_blocked_banner_when_not_ready(self) -> None:
+        with (
+            patch("mbm.analyst.assembly.core_ready", return_value=False),
+            patch("mbm.analyst.assembly.core_status_message", return_value=BLOCKED_STATUS),
+        ):
+            snap = _snapshot()
         html = render_board(snap)
         self.assertIn("Core BLOCKED", html)
         self.assertIn("mbm-cs2-fixture-eligible-001", html)
         self.assertIn("Today", html)
+        self.assertIn("fixture / demo data", html)
+
+    def test_board_html_shows_core_ready_banner_when_ready(self) -> None:
+        with (
+            patch("mbm.analyst.assembly.core_ready", return_value=True),
+            patch("mbm.analyst.assembly.core_status_message", return_value=READY_STATUS),
+        ):
+            snap = _snapshot()
+        html = render_board(snap)
+        self.assertIn("Core READY", html)
+        self.assertNotIn("Core BLOCKED", html)
+        self.assertIn("mbm-cs2-fixture-eligible-001", html)
         self.assertIn("fixture / demo data", html)
 
     def test_calibration_marks_insufficient_sample(self) -> None:

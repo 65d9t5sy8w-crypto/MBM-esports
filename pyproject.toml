@@ -11,11 +11,7 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "MBM" }]
 dependencies = [
-  # BLOCKED: authentic MBM Core v0.1.0 wheel not yet vendored.
-  # When Mason supplies vendor/mbm-core/mbm_core-0.1.0-py3-none-any.whl
-  # (SHA-256 d151b045fcfa9dd5225cd040740a5f246772bb14ceae5f10c16ff5b3fbf20151),
-  # enable:
-  # "mbm-core @ file:vendor/mbm-core/mbm_core-0.1.0-py3-none-any.whl",
+  "mbm-core @ file:vendor/mbm-core/mbm_core-0.1.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
