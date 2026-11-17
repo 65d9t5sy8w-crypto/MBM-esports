@@ -139,7 +139,12 @@ def injury_usable(*, reported_at: str, game_start: str) -> bool:
     return parse_iso(reported_at) < parse_iso(game_start)
 
 
-def ensure_cutoff_recorded(cutoff: PointInTimeCutoff | None, *, game_id: str) -> PointInTimeCutoff:
+def ensure_cutoff_recorded(
+    cutoff: PointInTimeCutoff | None,
+    *,
+    game_id: str,
+    game_start: str | None = None,
+) -> PointInTimeCutoff:
     if cutoff is None:
         raise ValueError(
             f"every prediction requires a recorded PointInTimeCutoff (game_id={game_id})"
@@ -148,4 +153,18 @@ def ensure_cutoff_recorded(cutoff: PointInTimeCutoff | None, *, game_id: str) ->
         raise ValueError(
             f"cutoff game_id {cutoff.game_id!r} does not match prediction game {game_id!r}"
         )
+    if game_start is not None:
+        expected = parse_iso(game_start)
+        got_start = parse_iso(cutoff.game_start)
+        if got_start != expected:
+            raise ValueError(
+                f"cutoff game_start {cutoff.game_start!r} does not match "
+                f"fixture start {game_start!r}"
+            )
+        # as_of must not exceed this fixture's tip-off (already enforced in
+        # PointInTimeCutoff.__post_init__ against cutoff.game_start).
+        if parse_iso(cutoff.as_of) > expected:
+            raise ValueError(
+                f"cutoff as_of {cutoff.as_of!r} exceeds fixture start {game_start!r}"
+            )
     return cutoff

@@ -73,6 +73,20 @@ class TestNbaAnalysis(unittest.TestCase):
 
 
 class TestNbaDashboard(unittest.TestCase):
+    def test_api_nba_snapshot_route_configured(self) -> None:
+        from mbm.dashboard.app import create_handler
+        from mbm.analyst.models import CalibrationView, DashboardSnapshot
+
+        empty_cal = CalibrationView(0, 0, [], [], ())
+        cs2 = DashboardSnapshot(
+            "cs2", "demo", "blocked", False, "2025-01-01T00:00:00Z", [], {}, [], empty_cal
+        )
+        nba = DashboardSnapshot(
+            "nba", "demo", "blocked", False, "2025-01-01T00:00:00Z", [], {}, [], empty_cal
+        )
+        handler_cls = create_handler(cs2, nba_snapshot=nba)
+        self.assertIsNotNone(handler_cls.nba_snapshot_provider)
+
     def test_assemble_and_render(self) -> None:
         env = refresh_from_synthetic(SYN_OK, target_player_id="237", line=27.5)
         demo = ROOT / "fixtures" / "nba" / "demo_prop"

@@ -132,12 +132,25 @@ a.pick { color: var(--accent); font-weight: 600; }
 """
 
 
-def render_shell(snapshot: DashboardSnapshot, body: str, active: str) -> str:
+def render_shell(
+    snapshot: DashboardSnapshot,
+    body: str,
+    active: str,
+    *,
+    route_prefix: str = "",
+) -> str:
     banner_cls = "banner ok" if snapshot.core_ready else "banner"
+    prefix = route_prefix.rstrip("/")
+    board_href = f"{prefix}/" if prefix else "/"
+    settlement_href = f"{prefix}/settlement" if prefix else "/settlement"
+    calibration_href = f"{prefix}/calibration" if prefix else "/calibration"
+    # NBA board lives at /nba (not /nba/).
+    if prefix == "/nba":
+        board_href = "/nba"
     links = [
-        ("board", "Today’s Board", "/"),
-        ("settlement", "Settlement", "/settlement"),
-        ("calibration", "Calibration", "/calibration"),
+        ("board", "Today’s Board", board_href),
+        ("settlement", "Settlement", settlement_href),
+        ("calibration", "Calibration", calibration_href),
     ]
     nav = []
     for key, label, href in links:
@@ -166,13 +179,15 @@ def render_shell(snapshot: DashboardSnapshot, body: str, active: str) -> str:
 </html>"""
 
 
-def render_board(snapshot: DashboardSnapshot) -> str:
+def render_board(snapshot: DashboardSnapshot, *, route_prefix: str = "") -> str:
+    prefix = route_prefix.rstrip("/")
+    pick_base = f"{prefix}/pick" if prefix else "/pick"
     rows = []
     for row in snapshot.board:
         elig = f'<span class="ok">eligible</span>' if row.eligible else f'<span class="fail">not eligible</span>'
         rows.append(
             "<tr>"
-            f"<td><a class='pick' href='/pick/{_e(row.pick_id)}'>{_e(row.event_id)}</a><div class='muted'>{_e(row.team_a)} vs {_e(row.team_b)}</div><div class='muted'>{_e(row.start_time)}</div></td>"
+            f"<td><a class='pick' href='{pick_base}/{_e(row.pick_id)}'>{_e(row.event_id)}</a><div class='muted'>{_e(row.team_a)} vs {_e(row.team_b)}</div><div class='muted'>{_e(row.start_time)}</div></td>"
             f"<td>{_e(row.market_scope)}</td>"
             f"<td>{_e(row.player_name)}<div class='muted'>{_e(row.stat)} {_e(row.line)}</div></td>"
             f"<td>{_badge(row.recommendation)}</td>"
@@ -195,10 +210,15 @@ def render_board(snapshot: DashboardSnapshot) -> str:
       </table>
     </div>
     """
-    return render_shell(snapshot, body, "board")
+    return render_shell(snapshot, body, "board", route_prefix=route_prefix)
 
 
-def render_pick(snapshot: DashboardSnapshot, pick: PickDetail) -> str:
+def render_pick(
+    snapshot: DashboardSnapshot,
+    pick: PickDetail,
+    *,
+    route_prefix: str = "",
+) -> str:
     attempts = "".join(
         f"<li><strong>{_e(a['source'])}</strong> — {_e(a['outcome'])}: {_e(a['detail'])}</li>"
         for a in pick.source_attempts
@@ -213,8 +233,10 @@ def render_pick(snapshot: DashboardSnapshot, pick: PickDetail) -> str:
         if pick.pass_reason
         else ""
     )
+    prefix = route_prefix.rstrip("/")
+    back_href = "/nba" if prefix == "/nba" else (f"{prefix}/" if prefix else "/")
     body = f"""
-    <p><a href="/">← Back to board</a></p>
+    <p><a href="{back_href}">← Back to board</a></p>
     <div class="card">
       <h2>Pick Detail · {_e(pick.pick_id)}</h2>
       <div class="grid">
@@ -265,10 +287,10 @@ def render_pick(snapshot: DashboardSnapshot, pick: PickDetail) -> str:
       <pre class="kv">{_e(pick.probabilities)}</pre>
     </div>
     """
-    return render_shell(snapshot, body, "board")
+    return render_shell(snapshot, body, "board", route_prefix=route_prefix)
 
 
-def render_settlement(snapshot: DashboardSnapshot) -> str:
+def render_settlement(snapshot: DashboardSnapshot, *, route_prefix: str = "") -> str:
     rows = []
     for s in snapshot.settlements:
         rows.append(
@@ -289,10 +311,10 @@ def render_settlement(snapshot: DashboardSnapshot) -> str:
       </table>
     </div>
     """
-    return render_shell(snapshot, body, "settlement")
+    return render_shell(snapshot, body, "settlement", route_prefix=route_prefix)
 
 
-def render_calibration(snapshot: DashboardSnapshot) -> str:
+def render_calibration(snapshot: DashboardSnapshot, *, route_prefix: str = "") -> str:
     cal = snapshot.calibration
 
     def buckets(items):
@@ -341,8 +363,15 @@ def render_calibration(snapshot: DashboardSnapshot) -> str:
     </div>
     <div class="card"><h2>Notes</h2><ul>{notes}</ul></div>
     """
-    return render_shell(snapshot, body, "calibration")
+    return render_shell(snapshot, body, "calibration", route_prefix=route_prefix)
 
 
-def render_not_found(snapshot: DashboardSnapshot, message: str) -> str:
-    return render_shell(snapshot, f"<div class='card'><h2>Not found</h2><p>{_e(message)}</p></div>", "board")
+def render_not_found(
+    snapshot: DashboardSnapshot, message: str, *, route_prefix: str = ""
+) -> str:
+    return render_shell(
+        snapshot,
+        f"<div class='card'><h2>Not found</h2><p>{_e(message)}</p></div>",
+        "board",
+        route_prefix=route_prefix,
+    )

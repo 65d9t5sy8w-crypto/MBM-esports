@@ -1021,12 +1021,6 @@
       "stat": "points",
       "line": 27.5,
       "market_scope": "full_game"
-    },
-    {
-      "player_id": "237",
-      "stat": "points",
-      "line": 27.5,
-      "market_scope": "full_game"
     }
   ],
   "evidence_status": "incomplete",

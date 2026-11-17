@@ -220,25 +220,49 @@ _TEMPLATE_PREFIXES = (
 )
 
 
+def _path_only(path: str) -> str:
+    """Strip query/fragment before catalog matching."""
+    # Avoid importing urllib here for a tiny split; keep local.
+    bare = path.split("?", 1)[0].split("#", 1)[0]
+    return bare or path
+
+
+def _numeric_id(segment: str) -> bool:
+    return segment.isdigit()
+
+
 def canonicalize_path(path: str) -> str:
     """Map a concrete request path to its OpenAPI template form when applicable."""
+    path = _path_only(path)
     if path in _BY_PATH:
         return path
     if path.startswith("/nba/v1/teams/") and path.count("/") == 4:
-        return "/nba/v1/teams/{id}"
+        seg = path.rsplit("/", 1)[-1]
+        if _numeric_id(seg):
+            return "/nba/v1/teams/{id}"
+        return path
     if path.startswith("/nba/v1/players/") and path.count("/") == 4:
-        # /nba/v1/players/active is a distinct path
-        if path == "/nba/v1/players/active":
-            return path
-        return "/nba/v1/players/{id}"
+        seg = path.rsplit("/", 1)[-1]
+        # Distinct catalog path — never treat "active" as a player id.
+        if seg == "active":
+            return "/nba/v1/players/active"
+        if _numeric_id(seg):
+            return "/nba/v1/players/{id}"
+        return path
     if path.startswith("/nba/v1/games/") and path.count("/") == 4:
-        return "/nba/v1/games/{id}"
+        seg = path.rsplit("/", 1)[-1]
+        if _numeric_id(seg):
+            return "/nba/v1/games/{id}"
+        return path
     if path.startswith("/nba/v1/season_averages/") and path.count("/") == 4:
         return "/nba/v1/season_averages/{type}"
     if path.startswith("/nba/v1/team_season_averages/") and path.count("/") == 4:
         return "/nba/v1/team_season_averages/{category}"
     if path.startswith("/nba/v1/dfs/slates/") and path.count("/") == 4:
-        return "/nba/v1/dfs/slates/{id}"
+        seg = path.rsplit("/", 1)[-1]
+        if _numeric_id(seg):
+            return "/nba/v1/dfs/slates/{id}"
+        return path
     return path
 
 

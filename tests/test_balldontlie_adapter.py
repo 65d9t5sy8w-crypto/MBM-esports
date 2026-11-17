@@ -65,6 +65,38 @@ class TestBallDontLieAdapter(unittest.TestCase):
         with self.assertRaises(ValueError):
             adapter.request("/nba/v1/not_a_real_endpoint")
 
+    def test_players_active_query_not_authorized_as_player_id(self) -> None:
+        from mbm.providers.balldontlie.endpoints import canonicalize_path, is_enabled
+
+        self.assertEqual(
+            canonicalize_path("/nba/v1/players/active?per_page=1"),
+            "/nba/v1/players/active",
+        )
+        self.assertFalse(is_enabled("/nba/v1/players/active?per_page=1"))
+        adapter = BallDontLieNbaAdapter(api_key="test-key")
+        with patch("urllib.request.urlopen") as urlopen:
+            result = adapter.request("/nba/v1/players/active?per_page=1")
+            urlopen.assert_not_called()
+        self.assertFalse(result.enabled)
+        self.assertIn("disabled", (result.unavailable_reason or "").lower())
+
+    def test_redact_secrets_full_authorization_value(self) -> None:
+        self.assertNotIn(
+            "secret-token",
+            redact_secrets('{"authorization":"Bearer secret-token"}'),
+        )
+        self.assertNotIn("secret-token", redact_secrets("Authorization: Bearer secret-token"))
+        self.assertIn("REDACTED", redact_secrets("Authorization: secret-token"))
+
+    def test_incomplete_read_returns_unavailable(self) -> None:
+        import http.client
+
+        adapter = BallDontLieNbaAdapter(api_key="test-key")
+        with patch("urllib.request.urlopen", side_effect=http.client.IncompleteRead(b"partial")):
+            result = adapter.teams()
+        self.assertFalse(result.available)
+        self.assertIn("transport error", result.unavailable_reason or "")
+
     def test_missing_key_unavailable(self) -> None:
         adapter = BallDontLieNbaAdapter(api_key="")
         result = adapter.teams()

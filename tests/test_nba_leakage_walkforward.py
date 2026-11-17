@@ -94,11 +94,11 @@ class TestNoLookahead(unittest.TestCase):
         snaps = [
             MarketSnapshot(
                 "dk", "points", 27.5, -115, -105, "2025-11-14T21:00:00Z",
-                "balldontlie", "prop:1", "910001",
+                "balldontlie", "prop:1", "910001", "237",
             ),
             MarketSnapshot(
                 "fd", "points", 27.5, -200, 150, "2025-11-15T03:00:00Z",
-                "balldontlie", "prop:leak", "910001",
+                "balldontlie", "prop:leak", "910001", "237",
             ),
         ]
         usable = select_pre_tip_snapshots(snaps, game_start="2025-11-15T02:00:00Z")
@@ -194,6 +194,70 @@ class TestPurgedWalkForward(unittest.TestCase):
         folds = chronological_walk_forward(events, min_train=1)
         eval_ids = [f.eval_game_id for f in folds]
         self.assertEqual(eval_ids, ["mid", "late"])
+
+    def test_same_tip_off_excluded_from_training(self) -> None:
+        events = [
+            WalkForwardEvent("a", "2025-11-10T02:00:00Z", ()),
+            WalkForwardEvent("b", "2025-11-10T02:00:00Z", ()),
+            WalkForwardEvent("c", "2025-11-15T02:00:00Z", ()),
+        ]
+        folds = chronological_walk_forward(events, min_train=1)
+        # a and b share tip-off — neither may train the other; only c can eval with prior.
+        for fold in folds:
+            if fold.eval_game_id in {"a", "b"}:
+                self.fail("same tip-off games must not form folds against each other")
+            self.assertEqual(fold.eval_game_id, "c")
+            self.assertEqual(set(fold.train_game_ids), {"a", "b"})
+
+    def test_run_walk_forward_passes_label_free_as_of_features(self) -> None:
+        from mbm.behavioral.adapters.nba.walkforward import run_walk_forward
+
+        events = [
+            WalkForwardEvent(
+                "g1",
+                "2025-11-01T02:00:00Z",
+                (TimedObservation("f1", "2025-10-31T12:00:00Z", 1),),
+                TimedObservation(
+                    "l1",
+                    "2025-11-01T05:00:00Z",
+                    1,
+                    is_label=True,
+                    valid_from="2025-11-01T02:00:00Z",
+                    valid_to="2025-11-01T05:00:00Z",
+                ),
+            ),
+            WalkForwardEvent(
+                "g2",
+                "2025-11-05T02:00:00Z",
+                (
+                    TimedObservation("pre", "2025-11-04T12:00:00Z", 1),
+                    TimedObservation("post", "2025-11-05T03:00:00Z", 99),
+                ),
+                TimedObservation(
+                    "l2",
+                    "2025-11-05T05:00:00Z",
+                    1,
+                    is_label=True,
+                    valid_from="2025-11-05T02:00:00Z",
+                    valid_to="2025-11-05T05:00:00Z",
+                ),
+            ),
+        ]
+        seen: list[WalkForwardEvent] = []
+
+        def predict(_fold, ev):
+            seen.append(ev)
+            return "ok"
+
+        results = run_walk_forward(events, predict, min_train=1)
+        self.assertEqual(len(results), 1)
+        fold, pred, label = results[0]
+        self.assertEqual(pred, "ok")
+        self.assertIsNotNone(label)
+        self.assertTrue(label.is_label)
+        self.assertEqual(seen[0].label, None)
+        self.assertEqual([f.key for f in seen[0].features], ["pre"])
+        self.assertEqual(fold.eval_game_id, "g2")
 
     def test_hyperparameter_tuning_rejects_current_or_future_folds(self) -> None:
         events = [

@@ -136,11 +136,27 @@ def _extract_market_prices(odds_rows: list[dict[str, Any]]) -> list[dict[str, An
     return prices
 
 
+def _parse_iso_safe(ts: str) -> datetime | None:
+    try:
+        text = str(ts).strip().replace("Z", "+00:00")
+        if "T" not in text:
+            text = f"{text}T00:00:00+00:00"
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
 def _extract_prop_lines(
     props: list[dict[str, Any]],
     *,
     target_player_id: str | None,
+    game_start: str | None = None,
 ) -> list[MarketLine]:
+    """Build market lines; reject rows updated on/after tip-off when known."""
+    cutoff = _parse_iso_safe(game_start) if game_start else None
     lines: list[MarketLine] = []
     for row in props:
         if not isinstance(row, dict):
@@ -148,6 +164,13 @@ def _extract_prop_lines(
         pid = str(row.get("player_id") or "")
         if target_player_id and pid != str(target_player_id):
             continue
+        updated = row.get("updated_at") or row.get("captured_at")
+        if cutoff is not None:
+            if not updated:
+                continue
+            obs = _parse_iso_safe(str(updated))
+            if obs is None or obs >= cutoff:
+                continue
         try:
             line_val = float(row.get("line_value"))
         except (TypeError, ValueError):
@@ -250,7 +273,9 @@ def normalize_balldontlie_bundle(
     odds_rows = [r for r in _as_list(clean.get("odds")) if isinstance(r, dict)]
     prop_rows = [r for r in _as_list(clean.get("player_props")) if isinstance(r, dict)]
     sportsbook_prices = _extract_market_prices(odds_rows)
-    market_lines = _extract_prop_lines(prop_rows, target_player_id=target_player_id)
+    market_lines = _extract_prop_lines(
+        prop_rows, target_player_id=target_player_id, game_start=start
+    )
 
     if target_player_id is not None and line is not None and not any(
         m.player_id == str(target_player_id) and m.stat == prop_stat for m in market_lines

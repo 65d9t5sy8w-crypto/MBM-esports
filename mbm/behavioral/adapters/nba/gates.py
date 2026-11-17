@@ -92,6 +92,7 @@ def _snapshots_from_envelope(envelope: EvidenceEnvelope) -> list[MarketSnapshot]
                 source_identity="balldontlie",
                 raw_evidence_ref=f"player_prop:{row.get('id')}",
                 game_id=str(row.get("game_id") or ""),
+                player_id=str(row.get("player_id") or "") or None,
             )
         )
     # Game totals / spreads as sportsbook prices with source identity.
@@ -119,9 +120,56 @@ def _snapshots_from_envelope(envelope: EvidenceEnvelope) -> list[MarketSnapshot]
                 source_identity=str(row.get("source_identity") or "balldontlie"),
                 raw_evidence_ref=str(row.get("raw_evidence_ref") or "odds"),
                 game_id=str(row.get("game_id") or ""),
+                player_id=None,
             )
         )
     return out
+
+
+def _select_pre_tip_line(
+    envelope: EvidenceEnvelope,
+    *,
+    cutoff: PointInTimeCutoff,
+):
+    """Pick the primary market line only if knowable before tip-off."""
+    # Prefer provider prop rows with captured_at < tip; fall back to envelope lines
+    # that originated from pre-tip extraction (normalize already filters).
+    tip = parse_iso(cutoff.game_start)
+    pre_tip_props: list[tuple[float, object]] = []
+    for row in envelope.map_context.get("player_props") or []:
+        if not isinstance(row, dict):
+            continue
+        captured = row.get("updated_at") or row.get("captured_at")
+        if not captured:
+            continue
+        try:
+            if parse_iso(str(captured)) >= tip:
+                continue
+        except ValueError:
+            continue
+        try:
+            line_val = float(row.get("line_value"))
+        except (TypeError, ValueError):
+            continue
+        from mbm.intake.types import MarketLine, MarketScope
+
+        pre_tip_props.append(
+            (
+                parse_iso(str(captured)).timestamp(),
+                MarketLine(
+                    player_id=str(row.get("player_id") or "unknown"),
+                    stat=str(row.get("prop_type") or "unknown"),
+                    line=line_val,
+                    market_scope=MarketScope.FULL_GAME,
+                ),
+            )
+        )
+    if pre_tip_props:
+        pre_tip_props.sort(key=lambda x: x[0], reverse=True)
+        return pre_tip_props[0][1]
+    # Envelope market_lines already filtered at normalize time for provider rows;
+    # Mason-attached lines (no provider timestamp) remain last-resort for tests.
+    return next(iter(envelope.market_lines), None)
 
 
 def evidence_quality_gate(envelope: EvidenceEnvelope) -> NbaGateResult:
@@ -188,34 +236,43 @@ def evaluate_nba_prop(
     history: Sequence[PlayerGameStat] | None = None,
     min_sample: int = MIN_RESEARCH_SAMPLE,
 ) -> NbaPropDecision:
-    game_id = str(envelope.map_context.get("game", {}).get("id") or envelope.fixture.event_id)
+    raw_game_id = envelope.map_context.get("game", {}).get("id")
+    game_id = str(raw_game_id if raw_game_id is not None else envelope.fixture.event_id)
+    # Strip synthetic-/balldontlie- prefixes when comparing cutoffs to numeric ids.
+    for prefix in ("synthetic-", "balldontlie-"):
+        if game_id.startswith(prefix):
+            game_id = game_id[len(prefix) :]
+            break
+    fixture_start = envelope.fixture.start_time
     if cutoff is None:
         cutoff = PointInTimeCutoff(
             game_id=game_id,
-            game_start=envelope.fixture.start_time,
-            as_of=envelope.fixture.start_time,
+            game_start=fixture_start,
+            as_of=fixture_start,
             recorded_at=envelope.captured_at,
         )
-    cutoff = ensure_cutoff_recorded(cutoff, game_id=cutoff.game_id)
+    cutoff = ensure_cutoff_recorded(
+        cutoff, game_id=game_id, game_start=fixture_start
+    )
 
     evidence_gate = evidence_quality_gate(envelope)
-    line_obj = next(iter(envelope.market_lines), None)
+    line_obj = _select_pre_tip_line(envelope, cutoff=cutoff)
     reasons: list[str] = []
 
     if not evidence_gate.passed:
         reasons.append(f"evidence_quality:{evidence_gate.detail}")
 
     if line_obj is None:
-        reasons.append("missing_market_line")
+        reasons.append("missing_pre_tip_market_line")
         prop = PropProbability(
             more=0.5,
             less=0.5,
             line=float("nan"),
             projection=float("nan"),
             sample_size=0,
-            failure_paths=("missing_market_line",),
+            failure_paths=("missing_pre_tip_market_line",),
         )
-        research_gate = NbaGateResult("research", False, "missing_market_line")
+        research_gate = NbaGateResult("research", False, "missing_pre_tip_market_line")
         cert = NbaGateResult("a_tier_certification", False, "blocked")
         return NbaPropDecision(
             action=NbaRecommendation.PASS,
@@ -227,7 +284,7 @@ def evaluate_nba_prop(
             prop=prop,
             grade="PASS",
             cutoff=cutoff,
-            market_notes=("no_line",),
+            market_notes=("no_pre_tip_line",),
             provenance=tuple(p.__dict__ for p in envelope.provenance),
         )
 
@@ -244,7 +301,6 @@ def evaluate_nba_prop(
 
     opponent_id = None
     game = envelope.map_context.get("game") or {}
-    # Crude opponent inference unused unless present on stats.
     windows = research_bundle(
         hist,
         as_of=cutoff.as_of,
@@ -269,7 +325,6 @@ def evaluate_nba_prop(
         reasons.append(f"research:{research_gate.detail}")
 
     snapshots = _snapshots_from_envelope(envelope)
-    # Reject post-tip market rows.
     bad_markets = [
         s
         for s in snapshots
@@ -277,7 +332,14 @@ def evaluate_nba_prop(
     ]
     if bad_markets:
         reasons.append(f"rejected_post_tip_markets:{len(bad_markets)}")
-    comparison = compare_to_market(prop, snapshots, game_start=cutoff.game_start)
+    comparison = compare_to_market(
+        prop,
+        snapshots,
+        game_start=cutoff.game_start,
+        game_id=str(game.get("id") or game_id),
+        player_id=str(line_obj.player_id),
+        prop_type=str(line_obj.stat),
+    )
 
     action = NbaRecommendation.PASS
     if evidence_gate.passed and research_ok:
@@ -298,8 +360,7 @@ def evaluate_nba_prop(
         else 0.0
     )
     grade = _grade(action, chosen_prob)
-    # Certification remains pending until walk-forward leakage tests pass in CI;
-    # this gate records A-tier *criteria* but does not claim global certification.
+    # Certification remains pending — local A-tier criteria only.
     cert_ok = (
         grade == "A"
         and evidence_gate.passed
@@ -311,7 +372,7 @@ def evaluate_nba_prop(
         name="a_tier_certification",
         passed=cert_ok,
         detail=(
-            "meets local A-tier criteria (global certification pending walk-forward suite)"
+            "meets local A-tier criteria (global certification pending)"
             if cert_ok
             else "not A-tier / certification pending"
         ),
@@ -320,7 +381,7 @@ def evaluate_nba_prop(
 
     return NbaPropDecision(
         action=action,
-        reasons=tuple(reasons) if action is NbaRecommendation.PASS else tuple(reasons),
+        reasons=tuple(reasons),
         evidence_gate=evidence_gate,
         research_gate=research_gate,
         certification_gate=cert,

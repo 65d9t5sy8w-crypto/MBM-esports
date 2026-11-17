@@ -105,9 +105,13 @@ def chronological_walk_forward(
     stamp = recorded_at or "1970-01-01T00:00:00Z"
 
     for i, ev in enumerate(ordered):
-        if i < min_train:
+        # Strictly earlier tip-offs only — same game_start is not chronological
+        # precedence (game_id tie-break must not put concurrent games in train).
+        prior = [
+            p for p in ordered[:i] if parse_iso(p.game_start) < parse_iso(ev.game_start)
+        ]
+        if len(prior) < min_train:
             continue
-        prior = ordered[:i]
         train_rows: list[TimedObservation] = []
         for p in prior:
             train_rows.extend(p.features)
@@ -190,14 +194,29 @@ def run_walk_forward(
     *,
     min_train: int = 1,
     purge_gap: timedelta | None = None,
-) -> list[tuple[WalkForwardFold, Any]]:
-    """Execute predict_fn on each fold's eval event with that fold's cutoff."""
+) -> list[tuple[WalkForwardFold, Any, TimedObservation | None]]:
+    """Execute predict_fn on each fold with as-of-filtered, label-free eval features.
+
+    Returns ``(fold, prediction, held_out_label)``. The label is kept only for
+    grading and is never passed into ``predict_fn``.
+    """
+    from mbm.behavioral.adapters.nba.leakage import filter_as_of
+
     by_id = {e.game_id: e for e in events}
     folds = chronological_walk_forward(events, min_train=min_train, purge_gap=purge_gap)
-    out: list[tuple[WalkForwardFold, Any]] = []
+    out: list[tuple[WalkForwardFold, Any, TimedObservation | None]] = []
     for fold in folds:
         ev = by_id[fold.eval_game_id]
-        out.append((fold, predict_fn(fold, ev)))
+        safe_features = tuple(
+            filter_as_of(list(ev.features), as_of=fold.cutoff.as_of, allow_labels=False)
+        )
+        label_free = WalkForwardEvent(
+            game_id=ev.game_id,
+            game_start=ev.game_start,
+            features=safe_features,
+            label=None,
+        )
+        out.append((fold, predict_fn(fold, label_free), ev.label))
     return out
 
 

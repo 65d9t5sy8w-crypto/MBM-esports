@@ -6,6 +6,7 @@ Never places credentials in query strings, logs, or persisted URL metadata.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import re
@@ -29,13 +30,16 @@ BASE_URL = "https://api.balldontlie.io"
 USER_AGENT = f"MBM-esports/{__version__} (+https://github.com/65d9t5sy8w-crypto/MBM-esports)"
 API_KEY_ENV = "BALLDONTLIE_API_KEY"
 
-_AUTH_HEADER_RE = re.compile(r"(?i)(authorization\s*[:=]\s*)(\S+)")
+# Redact full Authorization values (optional quotes + optional Bearer prefix).
+_AUTH_HEADER_RE = re.compile(
+    r"(?i)([\"']?authorization[\"']?\s*[:=]\s*)([\"']?)(?:bearer\s+)?([^\"'\s,}]+)([\"']?)"
+)
 _BEARER_RE = re.compile(r"(?i)(bearer\s+)(\S+)")
 
 
 def redact_secrets(text: str) -> str:
     """Redact Authorization/Bearer material from any string before logging."""
-    out = _AUTH_HEADER_RE.sub(r"\1REDACTED", text)
+    out = _AUTH_HEADER_RE.sub(r"\1\2REDACTED\4", text)
     out = _BEARER_RE.sub(r"\1REDACTED", out)
     return out
 
@@ -115,14 +119,30 @@ class BallDontLieNbaAdapter:
         self.allow_disabled_probe = allow_disabled_probe
 
     def _headers(self) -> dict[str, str]:
-        headers = {
+        return {
             "Accept": "application/json",
             "User-Agent": USER_AGENT,
         }
-        if self.api_key:
-            # OpenAPI: ApiKeyAuth in header name Authorization (raw key, not Bearer).
-            headers["Authorization"] = self.api_key
-        return headers
+
+    def _transport_unavailable(
+        self,
+        *,
+        path: str,
+        safe_url: str,
+        enabled: bool,
+        detail: str,
+    ) -> BallDontLieHttpResult:
+        return BallDontLieHttpResult(
+            ok=False,
+            status=0,
+            content_type="",
+            body=b"",
+            url=safe_url,
+            path=path,
+            json_body=None,
+            unavailable_reason=f"BallDontLie unavailable: transport error ({detail})",
+            enabled=enabled,
+        )
 
     def request(
         self,
@@ -131,23 +151,25 @@ class BallDontLieNbaAdapter:
         *,
         force_probe: bool = False,
     ) -> BallDontLieHttpResult:
-        canon = canonicalize_path(path)
-        spec = get_endpoint(path)
+        # Strip query from path before catalog matching (callers may pass ?...).
+        path_only = urllib.parse.urlsplit(path).path or path
+        canon = canonicalize_path(path_only)
+        spec = get_endpoint(path_only)
         if spec is None:
             raise ValueError(
                 f"BallDontLieNbaAdapter refuses unknown path {path!r}; "
                 "only OpenAPI /nba/* operations are allowed"
             )
 
-        enabled = is_enabled(path)
+        enabled = is_enabled(path_only)
         if not enabled and not (force_probe and self.allow_disabled_probe):
-            reason = disabled_reason(path)
+            reason = disabled_reason(path_only)
             return BallDontLieHttpResult(
                 ok=False,
                 status=0,
                 content_type="",
                 body=b"",
-                url=redact_url(f"{self.base_url}{path}"),
+                url=redact_url(f"{self.base_url}{path_only}"),
                 path=canon,
                 json_body=None,
                 unavailable_reason=reason,
@@ -160,7 +182,7 @@ class BallDontLieNbaAdapter:
                 status=0,
                 content_type="",
                 body=b"",
-                url=redact_url(f"{self.base_url}{path}"),
+                url=redact_url(f"{self.base_url}{path_only}"),
                 path=canon,
                 json_body=None,
                 unavailable_reason=(
@@ -180,21 +202,43 @@ class BallDontLieNbaAdapter:
             else:
                 query_items.append((k, str(v)))
         query = urllib.parse.urlencode(query_items, doseq=True)
-        url = f"{self.base_url}{path}"
+        url = f"{self.base_url}{path_only}"
         if query:
             url = f"{url}?{query}"
         safe_url = redact_url(url)
-        req = urllib.request.Request(url, headers=self._headers(), method="GET")
+        headers = self._headers()
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        # Keep Authorization off redirected requests (origin/scheme change risk).
+        req.add_unredirected_header("Authorization", self.api_key)
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
                 status = int(getattr(resp, "status", 200))
                 content_type = resp.headers.get("Content-Type", "")
-                body = resp.read()
+                try:
+                    body = resp.read()
+                except (http.client.IncompleteRead, OSError, ValueError) as exc:
+                    return self._transport_unavailable(
+                        path=canon,
+                        safe_url=safe_url,
+                        enabled=enabled,
+                        detail=f"body read failed: {exc}",
+                    )
         except urllib.error.HTTPError as exc:
-            body = exc.read() if exc.fp is not None else b""
+            try:
+                body = exc.read() if exc.fp is not None else b""
+            except (http.client.IncompleteRead, OSError, ValueError) as read_exc:
+                return self._transport_unavailable(
+                    path=canon,
+                    safe_url=safe_url,
+                    enabled=enabled,
+                    detail=f"HTTP {exc.code} body read failed: {read_exc}",
+                )
             content_type = exc.headers.get("Content-Type", "") if exc.headers else ""
             detail = body.decode("utf-8", errors="replace")[:200]
             detail = redact_secrets(detail)
+            # Also scrub raw api key if it somehow appears bare.
+            if self.api_key and self.api_key in detail:
+                detail = detail.replace(self.api_key, "REDACTED")
             return BallDontLieHttpResult(
                 ok=False,
                 status=int(exc.code),
@@ -210,30 +254,16 @@ class BallDontLieNbaAdapter:
                 enabled=enabled,
             )
         except TimeoutError as exc:
-            return BallDontLieHttpResult(
-                ok=False,
-                status=0,
-                content_type="",
-                body=b"",
-                url=safe_url,
-                path=canon,
-                json_body=None,
-                unavailable_reason=f"BallDontLie unavailable: transport error ({exc})",
-                enabled=enabled,
+            return self._transport_unavailable(
+                path=canon, safe_url=safe_url, enabled=enabled, detail=str(exc)
             )
         except urllib.error.URLError as exc:
-            return BallDontLieHttpResult(
-                ok=False,
-                status=0,
-                content_type="",
-                body=b"",
-                url=safe_url,
-                path=canon,
-                json_body=None,
-                unavailable_reason=(
-                    f"BallDontLie unavailable: transport error ({exc.reason})"
-                ),
-                enabled=enabled,
+            return self._transport_unavailable(
+                path=canon, safe_url=safe_url, enabled=enabled, detail=str(exc.reason)
+            )
+        except http.client.IncompleteRead as exc:
+            return self._transport_unavailable(
+                path=canon, safe_url=safe_url, enabled=enabled, detail=str(exc)
             )
 
         if status != 200:

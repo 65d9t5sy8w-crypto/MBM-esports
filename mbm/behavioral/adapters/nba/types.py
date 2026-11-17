@@ -64,6 +64,7 @@ class MarketSnapshot:
     source_identity: str
     raw_evidence_ref: str
     game_id: str
+    player_id: str | None = None
 
 
 @dataclass(frozen=True)

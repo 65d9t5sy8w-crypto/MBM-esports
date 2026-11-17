@@ -25,13 +25,45 @@ def select_pre_tip_snapshots(
     ]
 
 
+def filter_snapshots_for_market(
+    snapshots: Sequence[MarketSnapshot],
+    *,
+    game_id: str,
+    player_id: str | None,
+    prop_type: str,
+) -> list[MarketSnapshot]:
+    """Keep snapshots for the same game / player / prop type only."""
+    out: list[MarketSnapshot] = []
+    for s in snapshots:
+        if str(s.game_id) != str(game_id):
+            continue
+        if str(s.prop_type) != str(prop_type):
+            continue
+        if player_id is not None and s.player_id is not None:
+            if str(s.player_id) != str(player_id):
+                continue
+        elif player_id is not None and s.player_id is None:
+            # Game totals / spreads have no player — exclude for player props.
+            continue
+        out.append(s)
+    return out
+
+
 def compare_to_market(
     prop: PropProbability,
     snapshots: Sequence[MarketSnapshot],
     *,
     game_start: str,
+    game_id: str | None = None,
+    player_id: str | None = None,
+    prop_type: str | None = None,
 ) -> MarketComparison:
-    usable = select_pre_tip_snapshots(snapshots, game_start=game_start)
+    scoped = list(snapshots)
+    if game_id is not None and prop_type is not None:
+        scoped = filter_snapshots_for_market(
+            scoped, game_id=game_id, player_id=player_id, prop_type=prop_type
+        )
+    usable = select_pre_tip_snapshots(scoped, game_start=game_start)
     notes: list[str] = []
     if not usable:
         notes.append("no_pre_tip_market_snapshot")
@@ -45,11 +77,14 @@ def compare_to_market(
             notes=tuple(notes),
         )
 
-    # Prefer snapshot matching prop line; else latest pre-tip.
+    # Prefer snapshot matching prop line; else latest pre-tip for same market.
     matched = [s for s in usable if abs(s.line - prop.line) < 1e-9]
     chosen = sorted(matched or list(usable), key=lambda s: s.captured_at)[-1]
     implied = american_to_implied_prob(chosen.more_odds)
-    edge = (prop.more - implied) if implied is not None else None
+    line_matches = abs(chosen.line - prop.line) < 1e-9
+    edge = (prop.more - implied) if implied is not None and line_matches else None
+    if not line_matches:
+        notes.append("edge_unavailable_line_mismatch")
     notes.append(
         f"compared_to_vendor={chosen.vendor};source={chosen.source_identity};"
         f"raw_ref={chosen.raw_evidence_ref};captured_at={chosen.captured_at}"

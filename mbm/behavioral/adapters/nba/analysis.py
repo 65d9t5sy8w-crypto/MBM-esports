@@ -154,17 +154,37 @@ def stats_from_envelope_context(map_context: dict[str, Any]) -> list[PlayerGameS
             opp_id = str(opp.get("id") or "")
         else:
             opp_id = str(opp or "")
+        raw_observed = row.get("observed_at")
+        if not raw_observed:
+            # Never backdate availability to tip-off — that leaks final stats.
+            continue
+        observed = str(raw_observed)
         game_id = str(game.get("id") or row.get("game_id") or "")
         game_start = str(
             game.get("datetime")
             or row.get("game_start")
             or game.get("date")
-            or row.get("observed_at")
             or ""
         )
-        observed = str(row.get("observed_at") or game_start)
+        if not game_start:
+            continue
         player_id = str(player.get("id") or row.get("player_id") or "")
         season = int(game.get("season") or row.get("season") or 0)
+        # Infer opponent from game home/visitor when explicit opponent missing.
+        if not opp_id:
+            home = game.get("home_team") if isinstance(game.get("home_team"), dict) else {}
+            visitor = (
+                game.get("visitor_team") if isinstance(game.get("visitor_team"), dict) else {}
+            )
+            team_id = str(team.get("id") or "")
+            home_id = str(home.get("id") or "")
+            visitor_id = str(visitor.get("id") or "")
+            if team_id and home_id and team_id == home_id and visitor_id:
+                opp_id = visitor_id
+            elif team_id and visitor_id and team_id == visitor_id and home_id:
+                opp_id = home_id
+            else:
+                opp_id = ""
         for stat_name in ("pts", "reb", "ast", "stl", "blk", "fg3m"):
             if stat_name in row and row[stat_name] is not None:
                 try:
@@ -185,7 +205,7 @@ def stats_from_envelope_context(map_context: dict[str, Any]) -> list[PlayerGameS
                         game_id=game_id,
                         player_id=player_id,
                         game_start=game_start,
-                        opponent_team_id=opp_id or str(team.get("id") or ""),
+                        opponent_team_id=opp_id,
                         season=season,
                         stat_name=prop_stat,
                         stat_value=val,

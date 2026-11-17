@@ -74,6 +74,7 @@ def assemble_nba_snapshot(
                 else "; ".join(decision.reasons) or "not eligible"
             )
         )
+        resolved_player_id = envelope.target_player_id or (line.player_id if line else "")
         row = BoardRow(
             pick_id=pick_id,
             event_id=envelope.fixture.event_id,
@@ -81,10 +82,10 @@ def assemble_nba_snapshot(
             team_b=envelope.fixture.team_b,
             start_time=envelope.fixture.start_time,
             market_scope=envelope.fixture.market_scope.value,
-            player_id=envelope.target_player_id or (line.player_id if line else ""),
+            player_id=resolved_player_id,
             player_name=next(
-                (p.name for p in envelope.players if p.player_id == (envelope.target_player_id or "")),
-                envelope.target_player_id or "",
+                (p.name for p in envelope.players if p.player_id == resolved_player_id),
+                resolved_player_id,
             ),
             stat=line.stat if line else "unknown",
             line=float(line.line) if line else float("nan"),
