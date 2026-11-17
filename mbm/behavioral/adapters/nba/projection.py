@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from mbm.behavioral.adapters.nba.leakage import market_snapshot_usable
+from mbm.behavioral.adapters.nba.leakage import market_snapshot_usable, parse_iso, try_parse_iso
 from mbm.behavioral.adapters.nba.props import american_to_implied_prob
 from mbm.behavioral.adapters.nba.types import MarketComparison, MarketSnapshot, PropProbability
 
@@ -18,6 +18,10 @@ def select_pre_tip_snapshots(
     *,
     game_start: str,
 ) -> list[MarketSnapshot]:
+    """Keep snapshots with parseable ``captured_at`` strictly before ``game_start``.
+
+    ``game_start`` should be the prediction ``as_of`` when called from gates.
+    """
     return [
         s
         for s in snapshots
@@ -77,9 +81,15 @@ def compare_to_market(
             notes=tuple(notes),
         )
 
-    # Prefer snapshot matching prop line; else latest pre-tip for same market.
+    # Prefer snapshot matching prop line; else latest pre-as_of for same market.
+    # Sort by parsed instant (not string order) so negative offsets compare correctly.
     matched = [s for s in usable if abs(s.line - prop.line) < 1e-9]
-    chosen = sorted(matched or list(usable), key=lambda s: s.captured_at)[-1]
+    pool = matched or list(usable)
+
+    def _captured_key(s: MarketSnapshot):
+        return try_parse_iso(s.captured_at) or parse_iso("1970-01-01T00:00:00Z")
+
+    chosen = sorted(pool, key=_captured_key)[-1]
     implied = american_to_implied_prob(chosen.more_odds)
     line_matches = abs(chosen.line - prop.line) < 1e-9
     edge = (prop.more - implied) if implied is not None and line_matches else None

@@ -26,6 +26,14 @@ def parse_iso(ts: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
+def try_parse_iso(ts: str) -> datetime | None:
+    """Return parsed UTC datetime, or None when the timestamp is unusable."""
+    try:
+        return parse_iso(ts)
+    except (TypeError, ValueError):
+        return None
+
+
 @dataclass(frozen=True)
 class PointInTimeCutoff:
     """Recorded cutoff for a single prediction.
@@ -131,8 +139,17 @@ def observation_window(row: TimedObservation) -> tuple[datetime, datetime]:
 
 
 def market_snapshot_usable(*, captured_at: str, game_start: str) -> bool:
-    """Sportsbook prices are usable only when captured strictly before tip-off."""
-    return parse_iso(captured_at) < parse_iso(game_start)
+    """Usable only when ``captured_at`` parses and is strictly before the cutoff.
+
+    Callers should pass ``cutoff.as_of`` (prediction time), not merely tip-off,
+    so lines that arrive between as_of and tip cannot leak into the decision.
+    Unparseable timestamps are rejected rather than raising.
+    """
+    captured = try_parse_iso(captured_at)
+    cutoff = try_parse_iso(game_start)
+    if captured is None or cutoff is None:
+        return False
+    return captured < cutoff
 
 
 def injury_usable(*, reported_at: str, game_start: str) -> bool:

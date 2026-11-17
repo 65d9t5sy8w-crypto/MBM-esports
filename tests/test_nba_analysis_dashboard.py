@@ -70,6 +70,77 @@ class TestNbaAnalysis(unittest.TestCase):
         )
         self.assertIn(decision.map_context.get("nba_action"), {"MORE", "LESS", "PASS"})
         self.assertIn("point_in_time_cutoff", decision.map_context)
+        self.assertIn("evaluated_market", decision.map_context)
+
+    def test_board_uses_evaluated_market_not_first_line(self) -> None:
+        from mbm.analyst.decision import CanonicalDecision
+        from mbm.analyst.models import GateView
+        from mbm.intake.types import (
+            EvidenceEnvelope,
+            EvidenceStatus,
+            FixtureIdentity,
+            IdentityStatus,
+            MarketLine,
+            MarketScope,
+            Recommendation,
+        )
+
+        env = EvidenceEnvelope(
+            source="synthetic_test_fixture",
+            captured_at="2025-11-15T01:00:00Z",
+            fixture=FixtureIdentity(
+                event_id="synthetic-910001",
+                team_a="A",
+                team_b="B",
+                start_time="2025-11-15T02:00:00Z",
+                format="nba_game",
+                market_scope=MarketScope.FULL_GAME,
+            ),
+            players=[],
+            match_logs=[],
+            map_context={},
+            market_lines=[
+                MarketLine("1", "rebounds", 10.5, MarketScope.FULL_GAME),
+                MarketLine("237", "points", 27.5, MarketScope.FULL_GAME),
+            ],
+            evidence_status=EvidenceStatus.INCOMPLETE,
+            identity_status=IdentityStatus.UNRESOLVED,
+            target_player_id="237",
+        )
+
+        def decide(_envelope: EvidenceEnvelope) -> CanonicalDecision:
+            return CanonicalDecision(
+                action=Recommendation.PASS,
+                reasons=("demo",),
+                opportunity=GateView("research", False, "demo", None),
+                conversion=GateView("a_tier_certification", False, "pending", None),
+                probabilities={"PASS": 1.0, "OVER": 0.0, "UNDER": 0.0},
+                provenance=(),
+                evidence_status="incomplete",
+                identity_status="unresolved",
+                identity_notes=(),
+                raw_refs=(),
+                map_context={
+                    "nba_action": "PASS",
+                    "nba_grade": "PASS",
+                    "evaluated_market": {
+                        "player_id": "237",
+                        "stat": "points",
+                        "line": 27.5,
+                    },
+                },
+                actionable=False,
+            )
+
+        snap = assemble_nba_snapshot(
+            [("nba-demo", env)],
+            decide,
+            data_label="nba-synthetic/demo",
+            now=datetime(2025, 11, 15, 1, 0, 0, tzinfo=timezone.utc),
+        )
+        self.assertEqual(snap.board[0].player_id, "237")
+        self.assertEqual(snap.board[0].stat, "points")
+        self.assertEqual(snap.board[0].line, 27.5)
 
 
 class TestNbaDashboard(unittest.TestCase):

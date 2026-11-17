@@ -379,5 +379,298 @@ class TestAuditAndMetrics(unittest.TestCase):
         self.assertIn("separately", " ".join(report.notes))
 
 
+class TestMacroscopeLeakageRegressions(unittest.TestCase):
+    """Regressions for as_of line selection, scoping, NaN stats, ISO sort."""
+
+    def test_as_of_rejects_line_between_cutoff_and_tip(self) -> None:
+        from mbm.behavioral.adapters.nba.gates import evaluate_nba_prop
+        from mbm.intake.types import (
+            EvidenceEnvelope,
+            EvidenceStatus,
+            FixtureIdentity,
+            IdentityStatus,
+            MarketScope,
+        )
+
+        tip = "2025-11-15T20:00:00Z"
+        as_of = "2025-11-15T18:00:00Z"
+        env = EvidenceEnvelope(
+            source="synthetic_test_fixture",
+            captured_at="2025-11-15T17:00:00Z",
+            fixture=FixtureIdentity(
+                event_id="synthetic-910001",
+                team_a="A",
+                team_b="B",
+                start_time=tip,
+                format="nba_game",
+                market_scope=MarketScope.FULL_GAME,
+            ),
+            players=[],
+            match_logs=[],
+            map_context={
+                "not_for_projection": False,
+                "game": {"id": 910001, "season": 2025},
+                "player_props": [
+                    {
+                        "id": 1,
+                        "game_id": 910001,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "27.5",
+                        "updated_at": "2025-11-15T19:00:00Z",  # after as_of, before tip
+                        "vendor": "dk",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    }
+                ],
+                "sportsbook_prices": [],
+                "stats": [],
+            },
+            market_lines=[],
+            evidence_status=EvidenceStatus.VERIFIED,
+            identity_status=IdentityStatus.RESOLVED,
+            target_player_id="237",
+        )
+        decision = evaluate_nba_prop(
+            env,
+            cutoff=PointInTimeCutoff(
+                game_id="910001",
+                game_start=tip,
+                as_of=as_of,
+                recorded_at="2025-11-15T17:00:00Z",
+            ),
+            history=[],
+            min_sample=1,
+        )
+        self.assertIsNone(decision.evaluated_line)
+        self.assertIn("missing_pre_tip_market_line", decision.reasons)
+
+    def test_prop_selection_scoped_to_game_and_player(self) -> None:
+        from mbm.behavioral.adapters.nba.gates import evaluate_nba_prop
+        from mbm.intake.types import (
+            EvidenceEnvelope,
+            EvidenceStatus,
+            FixtureIdentity,
+            IdentityStatus,
+            MarketScope,
+        )
+
+        tip = "2025-11-15T02:00:00Z"
+        env = EvidenceEnvelope(
+            source="synthetic_test_fixture",
+            captured_at="2025-11-15T01:00:00Z",
+            fixture=FixtureIdentity(
+                event_id="synthetic-910001",
+                team_a="A",
+                team_b="B",
+                start_time=tip,
+                format="nba_game",
+                market_scope=MarketScope.FULL_GAME,
+            ),
+            players=[],
+            match_logs=[],
+            map_context={
+                "not_for_projection": False,
+                "game": {"id": 910001, "season": 2025},
+                "player_props": [
+                    {
+                        "id": 99,
+                        "game_id": 999999,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "99.5",
+                        "updated_at": "2025-11-15T01:50:00Z",
+                        "vendor": "other-game",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    },
+                    {
+                        "id": 98,
+                        "game_id": 910001,
+                        "player_id": 1,
+                        "prop_type": "points",
+                        "line_value": "11.5",
+                        "updated_at": "2025-11-15T01:55:00Z",
+                        "vendor": "other-player",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    },
+                    {
+                        "id": 1,
+                        "game_id": 910001,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "27.5",
+                        "updated_at": "2025-11-15T01:00:00Z",
+                        "vendor": "dk",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    },
+                ],
+                "sportsbook_prices": [],
+                "stats": [],
+            },
+            market_lines=[],
+            evidence_status=EvidenceStatus.VERIFIED,
+            identity_status=IdentityStatus.RESOLVED,
+            target_player_id="237",
+        )
+        hist = [
+            PlayerGameStat(
+                game_id=f"g{i}",
+                player_id="237",
+                game_start=f"2025-11-{i:02d}T02:00:00Z",
+                opponent_team_id="2",
+                season=2025,
+                stat_name="points",
+                stat_value=30.0,
+                observed_at=f"2025-11-{i:02d}T05:00:00Z",
+            )
+            for i in range(1, 10)
+        ]
+        decision = evaluate_nba_prop(
+            env,
+            cutoff=PointInTimeCutoff(
+                game_id="910001",
+                game_start=tip,
+                as_of=tip,
+                recorded_at="2025-11-15T01:00:00Z",
+            ),
+            history=hist,
+            min_sample=5,
+        )
+        self.assertEqual(decision.evaluated_player_id, "237")
+        self.assertEqual(decision.evaluated_line, 27.5)
+        self.assertNotEqual(decision.evaluated_line, 99.5)
+        self.assertNotEqual(decision.evaluated_line, 11.5)
+
+    def test_unparseable_snapshot_does_not_abort_evaluation(self) -> None:
+        from mbm.behavioral.adapters.nba.gates import evaluate_nba_prop
+        from mbm.intake.types import (
+            EvidenceEnvelope,
+            EvidenceStatus,
+            FixtureIdentity,
+            IdentityStatus,
+            MarketScope,
+        )
+
+        tip = "2025-11-15T02:00:00Z"
+        env = EvidenceEnvelope(
+            source="synthetic_test_fixture",
+            captured_at="2025-11-15T01:00:00Z",
+            fixture=FixtureIdentity(
+                event_id="synthetic-910001",
+                team_a="A",
+                team_b="B",
+                start_time=tip,
+                format="nba_game",
+                market_scope=MarketScope.FULL_GAME,
+            ),
+            players=[],
+            match_logs=[],
+            map_context={
+                "not_for_projection": True,
+                "game": {"id": 910001, "season": 2025},
+                "player_props": [
+                    {
+                        "id": 1,
+                        "game_id": 910001,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "27.5",
+                        "updated_at": "2025-11-14T21:00:00Z",
+                        "vendor": "dk",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    },
+                    {
+                        "id": 2,
+                        "game_id": 910001,
+                        "player_id": 999,
+                        "prop_type": "points",
+                        "line_value": "10.5",
+                        "updated_at": "not-a-timestamp",
+                        "vendor": "bad",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    },
+                ],
+                "sportsbook_prices": [],
+                "stats": [],
+            },
+            market_lines=[],
+            evidence_status=EvidenceStatus.INCOMPLETE,
+            identity_status=IdentityStatus.RESOLVED,
+            target_player_id="237",
+        )
+        decision = evaluate_nba_prop(
+            env,
+            cutoff=PointInTimeCutoff(
+                game_id="910001",
+                game_start=tip,
+                as_of=tip,
+                recorded_at="2025-11-15T01:00:00Z",
+            ),
+            history=[],
+            min_sample=1,
+        )
+        self.assertEqual(decision.evaluated_line, 27.5)
+
+    def test_compare_to_market_sorts_by_parsed_instant(self) -> None:
+        # 22:00-05:00 == 03:00Z, which is after 01:00Z but still before a 05:00Z tip.
+        # Lexicographic string sort would wrongly prefer the Z timestamp.
+        snaps = [
+            MarketSnapshot(
+                "older_utc", "points", 27.5, -115, -105, "2025-11-15T01:00:00Z",
+                "balldontlie", "prop:1", "910001", "237",
+            ),
+            MarketSnapshot(
+                "newer_offset", "points", 27.5, -200, 150, "2025-11-14T22:00:00-05:00",
+                "balldontlie", "prop:2", "910001", "237",
+            ),
+        ]
+        prop = prop_probabilities(
+            {
+                "last_10": WindowSummary(
+                    AnalysisWindow.LAST_10, 10, 29.0, tuple([29.0] * 10),
+                    "2025-11-15T05:00:00Z",
+                )
+            },
+            line=27.5,
+        )
+        cmp = compare_to_market(
+            prop,
+            snaps,
+            game_start="2025-11-15T05:00:00Z",
+            game_id="910001",
+            player_id="237",
+            prop_type="points",
+        )
+        self.assertIn("newer_offset", " ".join(cmp.notes))
+
+    def test_non_finite_stats_rejected(self) -> None:
+        from mbm.behavioral.adapters.nba.analysis import stats_from_envelope_context
+
+        rows = stats_from_envelope_context(
+            {
+                "stats": [
+                    {
+                        "id": 1,
+                        "player": {"id": 237},
+                        "team": {"id": 14},
+                        "game": {
+                            "id": 1,
+                            "datetime": "2025-11-10T02:00:00Z",
+                            "home_team_id": 14,
+                            "visitor_team_id": 13,
+                        },
+                        "pts": "NaN",
+                        "reb": "Infinity",
+                        "ast": 5,
+                        "min": "30:00",
+                        "observed_at": "2025-11-10T05:00:00Z",
+                    }
+                ]
+            }
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].stat_name, "assists")
+        self.assertEqual(rows[0].stat_value, 5.0)
+
+
 if __name__ == "__main__":
     unittest.main()

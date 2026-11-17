@@ -6,6 +6,7 @@ are always returned. Post-game stats and future injuries are excluded.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, Sequence
 
@@ -190,6 +191,8 @@ def stats_from_envelope_context(map_context: dict[str, Any]) -> list[PlayerGameS
                 try:
                     val = float(row[stat_name])
                 except (TypeError, ValueError):
+                    continue
+                if not math.isfinite(val):
                     continue
                 # Normalize pts→points for prop alignment when present as pts.
                 prop_stat = {

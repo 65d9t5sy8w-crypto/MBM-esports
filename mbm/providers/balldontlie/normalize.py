@@ -60,7 +60,12 @@ def _game_start(game: dict[str, Any], fallback: str) -> str:
             continue
         text = str(val)
         if "T" in text:
-            return text if text.endswith("Z") or "+" in text[10:] else f"{text}Z"
+            # Preserve existing offsets (including negative, e.g. -05:00).
+            return (
+                text
+                if text.endswith("Z") or "+" in text[10:] or "-" in text[10:]
+                else f"{text}Z"
+            )
         # date-only → treat as tip-off unknown; use midnight UTC of that date
         return f"{text}T00:00:00Z"
     return fallback
@@ -154,12 +159,18 @@ def _extract_prop_lines(
     *,
     target_player_id: str | None,
     game_start: str | None = None,
+    game_id: str | None = None,
 ) -> list[MarketLine]:
-    """Build market lines; reject rows updated on/after tip-off when known."""
+    """Build market lines; reject rows updated on/after tip-off when known.
+
+    When ``game_id`` is set, only props for that game are accepted.
+    """
     cutoff = _parse_iso_safe(game_start) if game_start else None
     lines: list[MarketLine] = []
     for row in props:
         if not isinstance(row, dict):
+            continue
+        if game_id is not None and str(row.get("game_id") or "") != str(game_id):
             continue
         pid = str(row.get("player_id") or "")
         if target_player_id and pid != str(target_player_id):
@@ -270,13 +281,25 @@ def normalize_balldontlie_bundle(
         team = _team_label(p.get("team")) if isinstance(p.get("team"), dict) else ""
         players.append(PlayerIdentity(player_id=pid, name=name, team=team))
 
-    odds_rows = [r for r in _as_list(clean.get("odds")) if isinstance(r, dict)]
-    prop_rows = [r for r in _as_list(clean.get("player_props")) if isinstance(r, dict)]
+    odds_rows = [
+        r
+        for r in _as_list(clean.get("odds"))
+        if isinstance(r, dict) and (r.get("game_id") is None or str(r.get("game_id")) == event_id)
+    ]
+    prop_rows = [
+        r
+        for r in _as_list(clean.get("player_props"))
+        if isinstance(r, dict) and str(r.get("game_id") or "") == event_id
+    ]
     sportsbook_prices = _extract_market_prices(odds_rows)
     market_lines = _extract_prop_lines(
-        prop_rows, target_player_id=target_player_id, game_start=start
+        prop_rows,
+        target_player_id=target_player_id,
+        game_start=start,
+        game_id=event_id,
     )
 
+    # Mason-attached line for gate tests — never fabricate a resolved PlayerIdentity.
     if target_player_id is not None and line is not None and not any(
         m.player_id == str(target_player_id) and m.stat == prop_stat for m in market_lines
     ):
@@ -288,14 +311,6 @@ def normalize_balldontlie_bundle(
                 market_scope=NBA_MARKET_SCOPE,
             )
         )
-        if not any(p.player_id == str(target_player_id) for p in players):
-            players.append(
-                PlayerIdentity(
-                    player_id=str(target_player_id),
-                    name=str(target_player_id),
-                    team=team_a,
-                )
-            )
 
     injuries = [r for r in _as_list(clean.get("injuries")) if isinstance(r, dict)]
     advanced = [r for r in _as_list(clean.get("advanced_stats")) if isinstance(r, dict)]

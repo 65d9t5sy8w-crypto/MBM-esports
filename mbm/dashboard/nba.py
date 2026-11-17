@@ -59,7 +59,13 @@ def assemble_nba_snapshot(
 
     for pick_id, envelope in envelopes:
         decision = decide(envelope)
-        line = envelope.market_lines[0] if envelope.market_lines else None
+        # Prefer the market identity actually evaluated by gates, not market_lines[0].
+        evaluated = decision.map_context.get("evaluated_market")
+        evaluated = evaluated if isinstance(evaluated, dict) else {}
+        fallback = envelope.market_lines[0] if envelope.market_lines else None
+        eval_player = evaluated.get("player_id")
+        eval_stat = evaluated.get("stat")
+        eval_line = evaluated.get("line")
         rec = decision.action.value
         prob = float(decision.probabilities.get(rec, 0.0))
         nba_action = decision.map_context.get("nba_action", rec)
@@ -74,7 +80,18 @@ def assemble_nba_snapshot(
                 else "; ".join(decision.reasons) or "not eligible"
             )
         )
-        resolved_player_id = envelope.target_player_id or (line.player_id if line else "")
+        resolved_player_id = (
+            str(eval_player)
+            if eval_player
+            else (envelope.target_player_id or (fallback.player_id if fallback else ""))
+        )
+        try:
+            board_line = float(eval_line) if eval_line is not None else (
+                float(fallback.line) if fallback else float("nan")
+            )
+        except (TypeError, ValueError):
+            board_line = float("nan")
+        board_stat = str(eval_stat) if eval_stat else (fallback.stat if fallback else "unknown")
         row = BoardRow(
             pick_id=pick_id,
             event_id=envelope.fixture.event_id,
@@ -87,8 +104,8 @@ def assemble_nba_snapshot(
                 (p.name for p in envelope.players if p.player_id == resolved_player_id),
                 resolved_player_id,
             ),
-            stat=line.stat if line else "unknown",
-            line=float(line.line) if line else float("nan"),
+            stat=board_stat,
+            line=board_line,
             recommendation=str(nba_action),
             grade=grade,
             probability=prob,

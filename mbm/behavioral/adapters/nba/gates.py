@@ -15,6 +15,7 @@ from mbm.behavioral.adapters.nba.leakage import (
     ensure_cutoff_recorded,
     market_snapshot_usable,
     parse_iso,
+    try_parse_iso,
 )
 from mbm.behavioral.adapters.nba.projection import compare_to_market
 from mbm.behavioral.adapters.nba.props import prop_probabilities
@@ -52,6 +53,10 @@ class NbaPropDecision:
     cutoff: PointInTimeCutoff
     market_notes: tuple[str, ...]
     provenance: tuple[dict, ...]
+    # Identity of the market line actually used for probabilities / action.
+    evaluated_player_id: str | None = None
+    evaluated_stat: str | None = None
+    evaluated_line: float | None = None
 
     def __post_init__(self) -> None:
         if self.action.value not in ALLOWED_NBA_ACTIONS:
@@ -131,21 +136,31 @@ def _select_pre_tip_line(
     *,
     cutoff: PointInTimeCutoff,
 ):
-    """Pick the primary market line only if knowable before tip-off."""
-    # Prefer provider prop rows with captured_at < tip; fall back to envelope lines
-    # that originated from pre-tip extraction (normalize already filters).
-    tip = parse_iso(cutoff.game_start)
+    """Pick the primary market line only if knowable at ``cutoff.as_of``.
+
+    Scoped to the fixture ``cutoff.game_id`` and ``envelope.target_player_id``
+    (when set) so another game/player's newer quote cannot drive this decision.
+    """
+    as_of = parse_iso(cutoff.as_of)
+    target_game = str(cutoff.game_id)
+    target_player = (
+        str(envelope.target_player_id) if envelope.target_player_id is not None else None
+    )
     pre_tip_props: list[tuple[float, object]] = []
     for row in envelope.map_context.get("player_props") or []:
         if not isinstance(row, dict):
             continue
+        row_game = str(row.get("game_id") or "")
+        if row_game != target_game:
+            continue
+        row_player = str(row.get("player_id") or "")
+        if target_player is not None and row_player != target_player:
+            continue
         captured = row.get("updated_at") or row.get("captured_at")
         if not captured:
             continue
-        try:
-            if parse_iso(str(captured)) >= tip:
-                continue
-        except ValueError:
+        captured_dt = try_parse_iso(str(captured))
+        if captured_dt is None or captured_dt >= as_of:
             continue
         try:
             line_val = float(row.get("line_value"))
@@ -155,9 +170,9 @@ def _select_pre_tip_line(
 
         pre_tip_props.append(
             (
-                parse_iso(str(captured)).timestamp(),
+                captured_dt.timestamp(),
                 MarketLine(
-                    player_id=str(row.get("player_id") or "unknown"),
+                    player_id=row_player or "unknown",
                     stat=str(row.get("prop_type") or "unknown"),
                     line=line_val,
                     market_scope=MarketScope.FULL_GAME,
@@ -169,7 +184,11 @@ def _select_pre_tip_line(
         return pre_tip_props[0][1]
     # Envelope market_lines already filtered at normalize time for provider rows;
     # Mason-attached lines (no provider timestamp) remain last-resort for tests.
-    return next(iter(envelope.market_lines), None)
+    for line in envelope.market_lines:
+        if target_player is not None and str(line.player_id) != target_player:
+            continue
+        return line
+    return None
 
 
 def evidence_quality_gate(envelope: EvidenceEnvelope) -> NbaGateResult:
@@ -286,6 +305,9 @@ def evaluate_nba_prop(
             cutoff=cutoff,
             market_notes=("no_pre_tip_line",),
             provenance=tuple(p.__dict__ for p in envelope.provenance),
+            evaluated_player_id=None,
+            evaluated_stat=None,
+            evaluated_line=None,
         )
 
     hist = list(history) if history is not None else stats_from_envelope_context(
@@ -324,18 +346,24 @@ def evaluate_nba_prop(
     if not research_ok:
         reasons.append(f"research:{research_gate.detail}")
 
-    snapshots = _snapshots_from_envelope(envelope)
+    # Drop unparseable timestamps before usability checks / compare_to_market
+    # so one bad quote cannot abort the whole board.
+    snapshots = [
+        s
+        for s in _snapshots_from_envelope(envelope)
+        if try_parse_iso(s.captured_at) is not None
+    ]
     bad_markets = [
         s
         for s in snapshots
-        if not market_snapshot_usable(captured_at=s.captured_at, game_start=cutoff.game_start)
+        if not market_snapshot_usable(captured_at=s.captured_at, game_start=cutoff.as_of)
     ]
     if bad_markets:
-        reasons.append(f"rejected_post_tip_markets:{len(bad_markets)}")
+        reasons.append(f"rejected_post_as_of_markets:{len(bad_markets)}")
     comparison = compare_to_market(
         prop,
         snapshots,
-        game_start=cutoff.game_start,
+        game_start=cutoff.as_of,
         game_id=str(game.get("id") or game_id),
         player_id=str(line_obj.player_id),
         prop_type=str(line_obj.stat),
@@ -395,4 +423,7 @@ def evaluate_nba_prop(
         cutoff=cutoff,
         market_notes=comparison.notes,
         provenance=tuple(p.__dict__ for p in envelope.provenance),
+        evaluated_player_id=str(line_obj.player_id),
+        evaluated_stat=str(line_obj.stat),
+        evaluated_line=float(line_obj.line),
     )

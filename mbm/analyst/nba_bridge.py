@@ -43,6 +43,11 @@ def decide_nba_prop(
         "as_of": result.cutoff.as_of,
         "recorded_at": result.cutoff.recorded_at,
     }
+    ctx["evaluated_market"] = {
+        "player_id": result.evaluated_player_id,
+        "stat": result.evaluated_stat,
+        "line": result.evaluated_line,
+    }
     ctx["market_notes"] = list(result.market_notes)
     ctx["certification_gate"] = result.certification_gate.detail
 

@@ -142,6 +142,102 @@ class TestBallDontLieAdapter(unittest.TestCase):
                 if isinstance(node, ast.ImportFrom) and node.module:
                     self.assertNotIn("balldontlie", node.module)
 
+    def test_game_start_preserves_negative_utc_offset(self) -> None:
+        from mbm.providers.balldontlie.normalize import normalize_balldontlie_bundle
+
+        env = normalize_balldontlie_bundle(
+            {
+                "source": "synthetic_test_fixture",
+                "not_for_projection": True,
+                "games": [
+                    {
+                        "id": 910001,
+                        "datetime": "2025-11-14T19:00:00-05:00",
+                        "home_team": {"full_name": "Los Angeles Lakers"},
+                        "visitor_team": {"full_name": "LA Clippers"},
+                    }
+                ],
+                "players": [],
+                "player_props": [],
+                "odds": [],
+            },
+            force_source="synthetic_test_fixture",
+        )
+        self.assertEqual(env.fixture.start_time, "2025-11-14T19:00:00-05:00")
+        self.assertFalse(env.fixture.start_time.endswith("Z"))
+
+    def test_missing_player_keeps_identity_unresolved(self) -> None:
+        from mbm.intake.types import IdentityStatus
+        from mbm.providers.balldontlie.normalize import normalize_balldontlie_bundle
+
+        env = normalize_balldontlie_bundle(
+            {
+                "source": "synthetic_test_fixture",
+                "not_for_projection": True,
+                "games": [
+                    {
+                        "id": 910001,
+                        "datetime": "2025-11-15T02:00:00Z",
+                        "home_team": {"full_name": "Los Angeles Lakers"},
+                        "visitor_team": {"full_name": "LA Clippers"},
+                    }
+                ],
+                "players": [],
+                "player_props": [],
+                "odds": [],
+            },
+            force_source="synthetic_test_fixture",
+            target_player_id="237",
+            line=27.5,
+        )
+        self.assertEqual(env.identity_status, IdentityStatus.UNRESOLVED)
+        self.assertFalse(any(p.player_id == "237" for p in env.players))
+        self.assertTrue(any(m.player_id == "237" and m.line == 27.5 for m in env.market_lines))
+
+    def test_props_from_other_games_excluded(self) -> None:
+        from mbm.providers.balldontlie.normalize import normalize_balldontlie_bundle
+
+        env = normalize_balldontlie_bundle(
+            {
+                "source": "synthetic_test_fixture",
+                "not_for_projection": True,
+                "games": [
+                    {
+                        "id": 910001,
+                        "datetime": "2025-11-15T02:00:00Z",
+                        "home_team": {"full_name": "Los Angeles Lakers"},
+                        "visitor_team": {"full_name": "LA Clippers"},
+                    }
+                ],
+                "players": [
+                    {"id": 237, "first_name": "LeBron", "last_name": "James", "team": {"full_name": "LAL"}}
+                ],
+                "player_props": [
+                    {
+                        "id": 1,
+                        "game_id": 999999,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "99.5",
+                        "updated_at": "2025-11-14T21:00:00Z",
+                    },
+                    {
+                        "id": 2,
+                        "game_id": 910001,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "27.5",
+                        "updated_at": "2025-11-14T21:00:00Z",
+                    },
+                ],
+                "odds": [],
+            },
+            force_source="synthetic_test_fixture",
+            target_player_id="237",
+        )
+        self.assertTrue(all(m.line != 99.5 for m in env.market_lines))
+        self.assertTrue(any(m.line == 27.5 for m in env.market_lines))
+
 
 if __name__ == "__main__":
     unittest.main()
