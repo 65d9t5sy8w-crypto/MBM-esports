@@ -11,6 +11,7 @@ class MarketScope(str, Enum):
     MAP_1 = "map_1"
     MAPS_1_2 = "maps_1_2"
     FULL_SERIES = "full_series"
+    FULL_GAME = "full_game"  # NBA game-level props / markets
 
 
 class IdentityStatus(str, Enum):

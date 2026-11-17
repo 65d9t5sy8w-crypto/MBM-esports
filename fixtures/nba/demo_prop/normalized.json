@@ -1,0 +1,1143 @@
+{
+  "source": "synthetic_test_fixture",
+  "captured_at": "1970-01-01T00:00:00Z",
+  "fixture": {
+    "event_id": "synthetic-910001",
+    "team_a": "Los Angeles Lakers",
+    "team_b": "LA Clippers",
+    "start_time": "2025-11-15T02:00:00Z",
+    "format": "nba_game",
+    "market_scope": "full_game"
+  },
+  "players": [
+    {
+      "player_id": "237",
+      "name": "LeBron James",
+      "team": "Los Angeles Lakers"
+    }
+  ],
+  "match_logs": [],
+  "map_context": {
+    "sport": "nba",
+    "provider": "synthetic_test_fixture",
+    "api": "balldontlie",
+    "openapi_ref": "vendor/balldontlie/nba.yml",
+    "game": {
+      "id": 910001,
+      "date": "2025-11-15",
+      "datetime": "2025-11-15T02:00:00Z",
+      "status": "Scheduled",
+      "status_state": "scheduled",
+      "season": 2025,
+      "home_team_score": 0,
+      "visitor_team_score": 0
+    },
+    "sportsbook_prices": [
+      {
+        "source_identity": "balldontlie",
+        "vendor": "draftkings",
+        "game_id": 910001,
+        "spread_home_value": "-3.5",
+        "spread_home_odds": -110,
+        "spread_away_value": "3.5",
+        "spread_away_odds": -110,
+        "moneyline_home_odds": -150,
+        "moneyline_away_odds": 130,
+        "total_value": "224.5",
+        "total_over_odds": -110,
+        "total_under_odds": -110,
+        "updated_at": "2025-11-14T21:00:00Z",
+        "raw_evidence_ref": "odds:1105"
+      }
+    ],
+    "player_props_raw_count": 2,
+    "stats_count": 11,
+    "advanced_stats_count": 1,
+    "injuries_count": 1,
+    "lineups_count": 0,
+    "projected_lineups_count": 1,
+    "stats": [
+      {
+        "id": 800001,
+        "min": "34:00",
+        "pts": 28,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900001,
+          "date": "2025-10-22",
+          "datetime": "2025-10-22T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 111,
+          "visitor_team_score": 101,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 2,
+            "conference": "East",
+            "division": "Atlantic",
+            "city": "Boston",
+            "name": "Celtics",
+            "full_name": "Boston Celtics",
+            "abbreviation": "BOS"
+          }
+        },
+        "opponent_team_id": 2,
+        "observed_at": "2025-10-22T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800002,
+        "min": "34:00",
+        "pts": 31,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900002,
+          "date": "2025-10-25",
+          "datetime": "2025-10-25T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 112,
+          "visitor_team_score": 102,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 2,
+            "conference": "East",
+            "division": "Atlantic",
+            "city": "Boston",
+            "name": "Celtics",
+            "full_name": "Boston Celtics",
+            "abbreviation": "BOS"
+          }
+        },
+        "opponent_team_id": 2,
+        "observed_at": "2025-10-25T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800003,
+        "min": "34:00",
+        "pts": 22,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900003,
+          "date": "2025-10-28",
+          "datetime": "2025-10-28T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 113,
+          "visitor_team_score": 103,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 3,
+            "full_name": "Opponent 3",
+            "abbreviation": "O3",
+            "name": "Opp3",
+            "city": "X",
+            "conference": "West",
+            "division": "Pacific"
+          }
+        },
+        "opponent_team_id": 3,
+        "observed_at": "2025-10-28T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800004,
+        "min": "34:00",
+        "pts": 27,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900004,
+          "date": "2025-10-31",
+          "datetime": "2025-10-31T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 114,
+          "visitor_team_score": 104,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 4,
+            "full_name": "Opponent 4",
+            "abbreviation": "O4",
+            "name": "Opp4",
+            "city": "X",
+            "conference": "West",
+            "division": "Pacific"
+          }
+        },
+        "opponent_team_id": 4,
+        "observed_at": "2025-10-31T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800005,
+        "min": "34:00",
+        "pts": 33,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900005,
+          "date": "2025-11-02",
+          "datetime": "2025-11-02T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 115,
+          "visitor_team_score": 105,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 2,
+            "conference": "East",
+            "division": "Atlantic",
+            "city": "Boston",
+            "name": "Celtics",
+            "full_name": "Boston Celtics",
+            "abbreviation": "BOS"
+          }
+        },
+        "opponent_team_id": 2,
+        "observed_at": "2025-11-02T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800006,
+        "min": "34:00",
+        "pts": 29,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900006,
+          "date": "2025-11-05",
+          "datetime": "2025-11-05T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 116,
+          "visitor_team_score": 106,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 5,
+            "full_name": "Opponent 5",
+            "abbreviation": "O5",
+            "name": "Opp5",
+            "city": "X",
+            "conference": "West",
+            "division": "Pacific"
+          }
+        },
+        "opponent_team_id": 5,
+        "observed_at": "2025-11-05T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800007,
+        "min": "34:00",
+        "pts": 24,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900007,
+          "date": "2025-11-08",
+          "datetime": "2025-11-08T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 117,
+          "visitor_team_score": 107,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 6,
+            "full_name": "Opponent 6",
+            "abbreviation": "O6",
+            "name": "Opp6",
+            "city": "X",
+            "conference": "West",
+            "division": "Pacific"
+          }
+        },
+        "opponent_team_id": 6,
+        "observed_at": "2025-11-08T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800008,
+        "min": "34:00",
+        "pts": 30,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900008,
+          "date": "2025-11-10",
+          "datetime": "2025-11-10T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 118,
+          "visitor_team_score": 108,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 7,
+            "full_name": "Opponent 7",
+            "abbreviation": "O7",
+            "name": "Opp7",
+            "city": "X",
+            "conference": "West",
+            "division": "Pacific"
+          }
+        },
+        "opponent_team_id": 7,
+        "observed_at": "2025-11-10T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800009,
+        "min": "34:00",
+        "pts": 26,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900009,
+          "date": "2025-11-12",
+          "datetime": "2025-11-12T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 119,
+          "visitor_team_score": 109,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 8,
+            "full_name": "Opponent 8",
+            "abbreviation": "O8",
+            "name": "Opp8",
+            "city": "X",
+            "conference": "West",
+            "division": "Pacific"
+          }
+        },
+        "opponent_team_id": 8,
+        "observed_at": "2025-11-12T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 800010,
+        "min": "34:00",
+        "pts": 32,
+        "reb": 7,
+        "ast": 8,
+        "stl": 1,
+        "blk": 1,
+        "fg3m": 2,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 900010,
+          "date": "2025-11-13",
+          "datetime": "2025-11-13T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "period": 4,
+          "time": "Final",
+          "postseason": false,
+          "home_team_score": 120,
+          "visitor_team_score": 110,
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 2,
+            "conference": "East",
+            "division": "Atlantic",
+            "city": "Boston",
+            "name": "Celtics",
+            "full_name": "Boston Celtics",
+            "abbreviation": "BOS"
+          }
+        },
+        "opponent_team_id": 2,
+        "observed_at": "2025-11-13T05:00:00Z",
+        "season": 2025
+      },
+      {
+        "id": 899999,
+        "min": "36:00",
+        "pts": 50,
+        "reb": 12,
+        "ast": 12,
+        "stl": 3,
+        "blk": 2,
+        "fg3m": 5,
+        "player": {
+          "id": 237,
+          "first_name": "LeBron",
+          "last_name": "James",
+          "position": "F",
+          "height": "6-9",
+          "weight": "250",
+          "jersey_number": "23",
+          "college": "",
+          "country": "USA",
+          "draft_year": 2003,
+          "draft_round": 1,
+          "draft_number": 1,
+          "team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          }
+        },
+        "team": {
+          "id": 14,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Lakers",
+          "full_name": "Los Angeles Lakers",
+          "abbreviation": "LAL"
+        },
+        "game": {
+          "id": 999999,
+          "date": "2025-11-16",
+          "datetime": "2025-11-16T02:00:00Z",
+          "season": 2025,
+          "status": "Final",
+          "status_state": "final",
+          "home_team": {
+            "id": 14,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Lakers",
+            "full_name": "Los Angeles Lakers",
+            "abbreviation": "LAL"
+          },
+          "visitor_team": {
+            "id": 13,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Clippers",
+            "full_name": "LA Clippers",
+            "abbreviation": "LAC"
+          }
+        },
+        "opponent_team_id": 13,
+        "observed_at": "2025-11-16T05:00:00Z",
+        "season": 2025,
+        "_leak_bait": true
+      }
+    ],
+    "advanced_stats": [
+      {
+        "id": 1,
+        "game_id": 900001,
+        "player_id": 237,
+        "pie": 0.14,
+        "observed_at": "2025-10-22T05:00:00Z"
+      }
+    ],
+    "injuries": [
+      {
+        "player": {
+          "id": 999,
+          "first_name": "Other",
+          "last_name": "Player",
+          "team": {
+            "id": 13,
+            "conference": "West",
+            "division": "Pacific",
+            "city": "Los Angeles",
+            "name": "Clippers",
+            "full_name": "LA Clippers",
+            "abbreviation": "LAC"
+          }
+        },
+        "return_date": "2025-11-20",
+        "description": "Ankle",
+        "status": "Out",
+        "reported_at": "2025-11-14T18:00:00Z"
+      }
+    ],
+    "lineups": [],
+    "projected_lineups": [
+      {
+        "id": 1,
+        "game_id": 910001,
+        "team_id": 14,
+        "status": "expected",
+        "lineup": [
+          {
+            "position": "PG",
+            "player": {
+              "id": 1,
+              "first_name": "A",
+              "last_name": "One"
+            }
+          },
+          {
+            "position": "SG",
+            "player": {
+              "id": 2,
+              "first_name": "B",
+              "last_name": "Two"
+            }
+          },
+          {
+            "position": "SF",
+            "player": {
+              "id": 237,
+              "first_name": "LeBron",
+              "last_name": "James"
+            }
+          },
+          {
+            "position": "PF",
+            "player": {
+              "id": 4,
+              "first_name": "D",
+              "last_name": "Four"
+            }
+          },
+          {
+            "position": "C",
+            "player": {
+              "id": 5,
+              "first_name": "E",
+              "last_name": "Five"
+            }
+          }
+        ],
+        "updated_at": "2025-11-14T20:00:00Z"
+      }
+    ],
+    "player_props": [
+      {
+        "id": 501,
+        "game_id": 910001,
+        "player_id": 237,
+        "vendor": "draftkings",
+        "prop_type": "points",
+        "line_value": "27.5",
+        "market": {
+          "type": "over_under",
+          "over_odds": -115,
+          "under_odds": -105
+        },
+        "deeplinks": {
+          "event": null,
+          "selections": {}
+        },
+        "updated_at": "2025-11-14T21:30:00Z"
+      },
+      {
+        "id": 502,
+        "game_id": 910001,
+        "player_id": 237,
+        "vendor": "fanduel",
+        "prop_type": "points",
+        "line_value": "27.5",
+        "market": {
+          "type": "over_under",
+          "over_odds": -200,
+          "under_odds": 150
+        },
+        "deeplinks": {
+          "event": null,
+          "selections": {}
+        },
+        "updated_at": "2025-11-15T03:00:00Z",
+        "_leak_bait": true
+      }
+    ],
+    "not_for_projection": true,
+    "paid_endpoints_live": false
+  },
+  "market_lines": [
+    {
+      "player_id": "237",
+      "stat": "points",
+      "line": 27.5,
+      "market_scope": "full_game"
+    },
+    {
+      "player_id": "237",
+      "stat": "points",
+      "line": 27.5,
+      "market_scope": "full_game"
+    }
+  ],
+  "evidence_status": "incomplete",
+  "identity_status": "resolved",
+  "provenance": [
+    {
+      "name": "source",
+      "source": "synthetic_test_fixture",
+      "value": "synthetic_test_fixture",
+      "transform": null
+    },
+    {
+      "name": "captured_at",
+      "source": "synthetic_test_fixture",
+      "value": null,
+      "transform": null
+    },
+    {
+      "name": "not_for_projection",
+      "source": "synthetic_test_fixture",
+      "value": true,
+      "transform": null
+    },
+    {
+      "name": "market_scope",
+      "source": "synthetic_test_fixture",
+      "value": "full_game",
+      "transform": null
+    },
+    {
+      "name": "event_id",
+      "source": "synthetic_test_fixture",
+      "value": "910001",
+      "transform": null
+    },
+    {
+      "name": "sportsbook_price_count",
+      "source": "synthetic_test_fixture",
+      "value": 1,
+      "transform": null
+    },
+    {
+      "name": "raw_evidence_ref",
+      "source": "synthetic_test_fixture",
+      "value": null,
+      "transform": null
+    }
+  ],
+  "evidence_completeness": {
+    "games": true,
+    "market_board": true,
+    "player_stats": true,
+    "injuries": true
+  },
+  "source_attempts": [
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "teams HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "players HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "games HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "stats HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "advanced_stats HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "injuries HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "lineups HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "projected_lineups HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "odds HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic",
+      "outcome": "accepted",
+      "detail": "player_props HTTP 200 enabled=True content_type=application/json"
+    },
+    {
+      "source": "synthetic_test_fixture",
+      "outcome": "normalized",
+      "detail": "event_id=910001"
+    }
+  ],
+  "raw_ref": null,
+  "target_player_id": "237"
+}

@@ -1,0 +1,47 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "id": 501,
+      "game_id": 910001,
+      "player_id": 237,
+      "vendor": "draftkings",
+      "prop_type": "points",
+      "line_value": "27.5",
+      "market": {
+        "type": "over_under",
+        "over_odds": -115,
+        "under_odds": -105
+      },
+      "deeplinks": {
+        "event": null,
+        "selections": {}
+      },
+      "updated_at": "2025-11-14T21:30:00Z"
+    },
+    {
+      "id": 502,
+      "game_id": 910001,
+      "player_id": 237,
+      "vendor": "fanduel",
+      "prop_type": "points",
+      "line_value": "27.5",
+      "market": {
+        "type": "over_under",
+        "over_odds": -200,
+        "under_odds": 150
+      },
+      "deeplinks": {
+        "event": null,
+        "selections": {}
+      },
+      "updated_at": "2025-11-15T03:00:00Z",
+      "_leak_bait": true
+    }
+  ]
+}

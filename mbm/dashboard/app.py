@@ -25,6 +25,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     snapshot_provider: Callable[[], DashboardSnapshot] = staticmethod(
         lambda: (_ for _ in ()).throw(RuntimeError("snapshot provider unset"))
     )
+    nba_snapshot_provider: Callable[[], DashboardSnapshot] | None = None
 
     def log_message(self, fmt: str, *args) -> None:  # quieter local runs
         pass
@@ -47,6 +48,37 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/snapshot":
             self._send(200, json.dumps(snapshot.to_dict(), default=str), "application/json")
             return
+        # NBA board routes (optional secondary snapshot).
+        if path.startswith("/nba"):
+            nba_provider = type(self).nba_snapshot_provider
+            if nba_provider is None:
+                self._send(404, render_not_found(snapshot, "NBA dashboard snapshot not configured"))
+                return
+            from mbm.dashboard.nba import render_nba_board
+
+            nba_snap = nba_provider()
+            if path in {"/nba", "/nba/", "/nba/board"}:
+                self._send(200, render_nba_board(nba_snap))
+                return
+            if path == "/nba/settlement":
+                self._send(200, render_settlement(nba_snap))
+                return
+            if path == "/nba/calibration":
+                self._send(200, render_calibration(nba_snap))
+                return
+            if path.startswith("/nba/pick/"):
+                pick_id = unquote(path[len("/nba/pick/") :])
+                pick = nba_snap.picks.get(pick_id)
+                if pick is None:
+                    self._send(404, render_not_found(nba_snap, f"Unknown NBA pick: {pick_id}"))
+                    return
+                self._send(200, render_pick(nba_snap, pick))
+                return
+            if path == "/api/nba/snapshot":
+                self._send(200, json.dumps(nba_snap.to_dict(), default=str), "application/json")
+                return
+            self._send(404, render_not_found(nba_snap, f"No NBA route for {path}"))
+            return
         if path in {"/", "/board"}:
             self._send(200, render_board(snapshot))
             return
@@ -67,11 +99,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self._send(404, render_not_found(snapshot, f"No route for {path}"))
 
 
-def create_handler(snapshot: DashboardSnapshot) -> type[BaseHTTPRequestHandler]:
+def create_handler(
+    snapshot: DashboardSnapshot,
+    *,
+    nba_snapshot: DashboardSnapshot | None = None,
+) -> type[BaseHTTPRequestHandler]:
     return type(
         "BoundDashboardHandler",
         (DashboardHandler,),
-        {"snapshot_provider": staticmethod(lambda: snapshot)},
+        {
+            "snapshot_provider": staticmethod(lambda: snapshot),
+            "nba_snapshot_provider": (staticmethod(lambda: nba_snapshot) if nba_snapshot else None),
+        },
     )
 
 
@@ -80,7 +119,8 @@ def serve_dashboard(
     *,
     host: str = "127.0.0.1",
     port: int = 8765,
+    nba_snapshot: DashboardSnapshot | None = None,
 ) -> ThreadingHTTPServer:
-    handler = create_handler(snapshot)
+    handler = create_handler(snapshot, nba_snapshot=nba_snapshot)
     server = ThreadingHTTPServer((host, port), handler)
     return server

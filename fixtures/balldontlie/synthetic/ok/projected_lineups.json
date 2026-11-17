@@ -1,0 +1,59 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "id": 1,
+      "game_id": 910001,
+      "team_id": 14,
+      "status": "expected",
+      "lineup": [
+        {
+          "position": "PG",
+          "player": {
+            "id": 1,
+            "first_name": "A",
+            "last_name": "One"
+          }
+        },
+        {
+          "position": "SG",
+          "player": {
+            "id": 2,
+            "first_name": "B",
+            "last_name": "Two"
+          }
+        },
+        {
+          "position": "SF",
+          "player": {
+            "id": 237,
+            "first_name": "LeBron",
+            "last_name": "James"
+          }
+        },
+        {
+          "position": "PF",
+          "player": {
+            "id": 4,
+            "first_name": "D",
+            "last_name": "Four"
+          }
+        },
+        {
+          "position": "C",
+          "player": {
+            "id": 5,
+            "first_name": "E",
+            "last_name": "Five"
+          }
+        }
+      ],
+      "updated_at": "2025-11-14T20:00:00Z"
+    }
+  ]
+}

@@ -80,9 +80,13 @@ python scripts/report_status.py
 python scripts/run_dashboard.py
 python scripts/refresh_bo3gg.py --mode synthetic
 python scripts/refresh_oddspapi.py --mode synthetic
+python scripts/refresh_balldontlie.py --mode synthetic
+python scripts/run_nba_dashboard.py --no-open
 # optional live smoke (honest UA only; stops on non-JSON/non-200):
 # python scripts/refresh_bo3gg.py --mode live
 # ODDSPAPI_API_KEY=... python scripts/refresh_oddspapi.py --mode live --sport cs2
+# BALLDONTLIE_API_KEY=... python scripts/refresh_balldontlie.py --mode live
+
 # PrizePicks browser-bridge capture API (no scoring; no server-side PP fetch):
 # python scripts/run_prizepicks_live.py
 git diff --check
@@ -96,6 +100,13 @@ sport IDs CS2=17, LoL=18, VALORANT=61). OddsPapi v5 is not authorized.
 Synthetic unit fixtures live under `fixtures/bo3gg/synthetic/` and
 `fixtures/oddspapi/synthetic/` and are **not** provider evidence.
 Never commit OddsPapi API keys (`ODDSPAPI_API_KEY`).
+
+BallDontLie NBA contract: [`docs/BALLDONTLIE_NBA_ENDPOINT_CONTRACT.md`](docs/BALLDONTLIE_NBA_ENDPOINT_CONTRACT.md)
+(`BallDontLieNbaAdapter`; OpenAPI `vendor/balldontlie/nba.yml`).
+Only FREE endpoints are enabled until paid access is verified. Synthetic fixtures
+under `fixtures/balldontlie/synthetic/` are **not** BallDontLie evidence.
+Never commit `BALLDONTLIE_API_KEY`. NBA dashboard: `python scripts/run_nba_dashboard.py`.
+Certification for NBA walk-forward / leakage controls remains **pending** until tests pass.
 
 PrizePicks capture: [`docs/MBM_PRIZEPICKS_ENDPOINT_CURSOR_DROP.md`](docs/MBM_PRIZEPICKS_ENDPOINT_CURSOR_DROP.md).
 Browser bridge posts response JSON only to `POST /api/live/prizepicks/capture-board`

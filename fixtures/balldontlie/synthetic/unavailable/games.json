@@ -1,0 +1,41 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "id": 910001,
+      "date": "2025-11-15",
+      "datetime": "2025-11-15T02:00:00Z",
+      "season": 2025,
+      "status": "Scheduled",
+      "status_state": "scheduled",
+      "period": 0,
+      "time": null,
+      "postseason": false,
+      "home_team_score": 0,
+      "visitor_team_score": 0,
+      "home_team": {
+        "id": 14,
+        "conference": "West",
+        "division": "Pacific",
+        "city": "Los Angeles",
+        "name": "Lakers",
+        "full_name": "Los Angeles Lakers",
+        "abbreviation": "LAL"
+      },
+      "visitor_team": {
+        "id": 13,
+        "conference": "West",
+        "division": "Pacific",
+        "city": "Los Angeles",
+        "name": "Clippers",
+        "full_name": "LA Clippers",
+        "abbreviation": "LAC"
+      }
+    }
+  ]
+}

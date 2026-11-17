@@ -1,0 +1,37 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "id": 14,
+      "conference": "West",
+      "division": "Pacific",
+      "city": "Los Angeles",
+      "name": "Lakers",
+      "full_name": "Los Angeles Lakers",
+      "abbreviation": "LAL"
+    },
+    {
+      "id": 13,
+      "conference": "West",
+      "division": "Pacific",
+      "city": "Los Angeles",
+      "name": "Clippers",
+      "full_name": "LA Clippers",
+      "abbreviation": "LAC"
+    },
+    {
+      "id": 2,
+      "conference": "East",
+      "division": "Atlantic",
+      "city": "Boston",
+      "name": "Celtics",
+      "full_name": "Boston Celtics",
+      "abbreviation": "BOS"
+    }
+  ]
+}

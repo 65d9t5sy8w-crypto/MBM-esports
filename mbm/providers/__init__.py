@@ -24,6 +24,20 @@ from mbm.providers.oddspapi.pipeline import (
 from mbm.providers.oddspapi.pipeline import (
     refresh_live_smoke as refresh_oddspapi_live_smoke,
 )
+from mbm.providers.balldontlie.client import (
+    API_KEY_ENV as BALLDONTLIE_API_KEY_ENV,
+)
+from mbm.providers.balldontlie.client import (
+    BallDontLieHttpResult,
+    BallDontLieNbaAdapter,
+)
+from mbm.providers.balldontlie.normalize import normalize_balldontlie_bundle
+from mbm.providers.balldontlie.pipeline import (
+    refresh_from_synthetic as refresh_balldontlie_from_synthetic,
+)
+from mbm.providers.balldontlie.pipeline import (
+    refresh_live_smoke as refresh_balldontlie_live_smoke,
+)
 
 # Back-compat aliases for the original BO3-only export surface.
 refresh_from_synthetic = refresh_bo3_from_synthetic
@@ -48,4 +62,10 @@ __all__ = [
     "normalize_oddspapi_bundle",
     "refresh_oddspapi_from_synthetic",
     "refresh_oddspapi_live_smoke",
+    "BallDontLieNbaAdapter",
+    "BallDontLieHttpResult",
+    "BALLDONTLIE_API_KEY_ENV",
+    "normalize_balldontlie_bundle",
+    "refresh_balldontlie_from_synthetic",
+    "refresh_balldontlie_live_smoke",
 ]

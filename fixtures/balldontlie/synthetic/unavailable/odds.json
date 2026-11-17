@@ -1,0 +1,14 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "status": 401,
+  "content_type": "text/plain",
+  "body": "Unauthorized",
+  "unavailable_reason": "BallDontLie unavailable: HTTP 401 (GOAT required; disabled)",
+  "enabled": false,
+  "url": "https://api.balldontlie.io/nba/v2/odds"
+}
