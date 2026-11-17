@@ -1,0 +1,32 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "id": 1105,
+      "game_id": 910001,
+      "vendor": "draftkings",
+      "deeplinks": {
+        "event": {
+          "url": "https://example.invalid/event",
+          "url_template": null
+        },
+        "selections": {}
+      },
+      "spread_home_value": "-3.5",
+      "spread_home_odds": -110,
+      "spread_away_value": "3.5",
+      "spread_away_odds": -110,
+      "moneyline_home_odds": -150,
+      "moneyline_away_odds": 130,
+      "total_value": "224.5",
+      "total_over_odds": -110,
+      "total_under_odds": -110,
+      "updated_at": "2025-11-14T21:00:00Z"
+    }
+  ]
+}

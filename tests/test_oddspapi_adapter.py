@@ -266,9 +266,14 @@ class TestOddsPapiV4Certification(unittest.TestCase):
             f"production code must contain zero 'v5' occurrences; found in {offenders}",
         )
 
-    def test_core_still_blocked_after_synthetic_refresh(self) -> None:
-        refresh_from_synthetic(SYN_OK, sport_id=SPORT_ID_CS2)
-        self.assertFalse(core_ready())
+    def test_synthetic_refresh_does_not_change_core_ready(self) -> None:
+        """Synthetic OddsPapi refresh must not fabricate Core readiness."""
+        before = core_ready()
+        env = refresh_from_synthetic(SYN_OK, sport_id=SPORT_ID_CS2)
+        self.assertEqual(core_ready(), before)
+        self.assertEqual(env.source, "synthetic_test_fixture")
+        self.assertTrue(env.map_context.get("not_for_projection"))
+
 
 
 if __name__ == "__main__":

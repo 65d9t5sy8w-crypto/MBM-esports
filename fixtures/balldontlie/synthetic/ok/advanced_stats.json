@@ -1,0 +1,17 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "id": 1,
+      "game_id": 900001,
+      "player_id": 237,
+      "pie": 0.14,
+      "observed_at": "2025-10-22T05:00:00Z"
+    }
+  ]
+}

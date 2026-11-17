@@ -1,0 +1,30 @@
+{
+  "_fixture_meta": {
+    "source": "synthetic_test_fixture",
+    "captured_at": null,
+    "not_for_projection": true,
+    "note": "Hand-authored BallDontLie-shaped fixture for unit tests only. Not provider evidence."
+  },
+  "data": [
+    {
+      "player": {
+        "id": 999,
+        "first_name": "Other",
+        "last_name": "Player",
+        "team": {
+          "id": 13,
+          "conference": "West",
+          "division": "Pacific",
+          "city": "Los Angeles",
+          "name": "Clippers",
+          "full_name": "LA Clippers",
+          "abbreviation": "LAC"
+        }
+      },
+      "return_date": "2025-11-20",
+      "description": "Ankle",
+      "status": "Out",
+      "reported_at": "2025-11-14T18:00:00Z"
+    }
+  ]
+}
