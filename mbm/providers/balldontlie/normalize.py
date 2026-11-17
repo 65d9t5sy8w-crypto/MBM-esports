@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from typing import Any
 
@@ -185,6 +186,8 @@ def _extract_prop_lines(
         try:
             line_val = float(row.get("line_value"))
         except (TypeError, ValueError):
+            continue
+        if not math.isfinite(line_val):
             continue
         stat = str(row.get("prop_type") or "unknown")
         lines.append(

@@ -27,6 +27,7 @@ from mbm.behavioral.adapters.nba.props import prop_probabilities
 from mbm.behavioral.adapters.nba.types import (
     AnalysisWindow,
     MarketSnapshot,
+    NbaRecommendation,
     TimedObservation,
     WindowSummary,
 )
@@ -670,6 +671,149 @@ class TestMacroscopeLeakageRegressions(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].stat_name, "assists")
         self.assertEqual(rows[0].stat_value, 5.0)
+
+    def test_non_finite_market_line_cannot_grade_a(self) -> None:
+        from mbm.behavioral.adapters.nba.gates import evaluate_nba_prop
+        from mbm.intake.types import (
+            EvidenceEnvelope,
+            EvidenceStatus,
+            FixtureIdentity,
+            IdentityStatus,
+            MarketLine,
+            MarketScope,
+        )
+
+        tip = "2025-11-15T02:00:00Z"
+        hist = [
+            PlayerGameStat(
+                game_id=f"g{i}",
+                player_id="237",
+                game_start=f"2025-11-{i:02d}T02:00:00Z",
+                opponent_team_id="2",
+                season=2025,
+                stat_name="points",
+                stat_value=30.0,
+                observed_at=f"2025-11-{i:02d}T05:00:00Z",
+            )
+            for i in range(1, 10)
+        ]
+        env = EvidenceEnvelope(
+            source="synthetic_test_fixture",
+            captured_at="2025-11-15T01:00:00Z",
+            fixture=FixtureIdentity(
+                event_id="synthetic-910001",
+                team_a="A",
+                team_b="B",
+                start_time=tip,
+                format="nba_game",
+                market_scope=MarketScope.FULL_GAME,
+            ),
+            players=[],
+            match_logs=[],
+            map_context={
+                "not_for_projection": False,
+                "game": {"id": 910001, "season": 2025},
+                "player_props": [
+                    {
+                        "id": 1,
+                        "game_id": 910001,
+                        "player_id": 237,
+                        "prop_type": "points",
+                        "line_value": "Infinity",
+                        "updated_at": "2025-11-14T21:00:00Z",
+                        "vendor": "dk",
+                        "market": {"type": "over_under", "over_odds": -110, "under_odds": -110},
+                    }
+                ],
+                "sportsbook_prices": [],
+                "stats": [],
+            },
+            market_lines=[
+                MarketLine("237", "points", float("inf"), MarketScope.FULL_GAME),
+            ],
+            evidence_status=EvidenceStatus.VERIFIED,
+            identity_status=IdentityStatus.RESOLVED,
+            target_player_id="237",
+        )
+        decision = evaluate_nba_prop(
+            env,
+            cutoff=PointInTimeCutoff(
+                game_id="910001",
+                game_start=tip,
+                as_of=tip,
+                recorded_at="2025-11-15T01:00:00Z",
+            ),
+            history=hist,
+            min_sample=5,
+        )
+        self.assertIsNone(decision.evaluated_line)
+        self.assertNotEqual(decision.grade, "A")
+        self.assertEqual(decision.action, NbaRecommendation.PASS)
+
+    def test_malformed_stat_timestamps_skipped(self) -> None:
+        from mbm.behavioral.adapters.nba.analysis import stats_from_envelope_context
+
+        rows = stats_from_envelope_context(
+            {
+                "stats": [
+                    {
+                        "player": {"id": 237},
+                        "team": {"id": 14},
+                        "game": {"id": 1, "datetime": "not-a-date", "season": 2025},
+                        "pts": 20,
+                        "observed_at": "2025-11-10T05:00:00Z",
+                    },
+                    {
+                        "player": {"id": 237},
+                        "team": {"id": 14},
+                        "game": {
+                            "id": 2,
+                            "datetime": "2025-11-10T02:00:00Z",
+                            "season": "twenty-five",
+                        },
+                        "pts": 22,
+                        "observed_at": "2025-11-10T05:00:00Z",
+                    },
+                    {
+                        "player": {"id": 237},
+                        "team": {"id": 14},
+                        "game": {
+                            "id": 3,
+                            "datetime": "2025-11-10T02:00:00Z",
+                            "season": 2025,
+                        },
+                        "pts": 24,
+                        "observed_at": "bad-observed",
+                    },
+                    {
+                        "player": {"id": 237},
+                        "team": {"id": 14},
+                        "game": {
+                            "id": 4,
+                            "datetime": "2025-11-10T02:00:00Z",
+                            "season": 2025,
+                        },
+                        "pts": 26,
+                        "observed_at": "2025-11-10T05:00:00Z",
+                    },
+                ]
+            }
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].stat_value, 26.0)
+
+    def test_parse_iso_accepts_space_separated_timestamp(self) -> None:
+        from mbm.behavioral.adapters.nba.leakage import parse_iso, market_snapshot_usable
+
+        dt = parse_iso("2025-11-14 21:30:00+00:00")
+        self.assertEqual(dt.year, 2025)
+        self.assertEqual(dt.hour, 21)
+        self.assertTrue(
+            market_snapshot_usable(
+                captured_at="2025-11-14 21:30:00+00:00",
+                game_start="2025-11-15T02:00:00Z",
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -73,6 +74,8 @@ def _snapshots_from_envelope(envelope: EvidenceEnvelope) -> list[MarketSnapshot]
             line = float(row.get("line_value"))
         except (TypeError, ValueError):
             continue
+        if not math.isfinite(line):
+            continue
         more_odds = None
         less_odds = None
         if str(market.get("type") or "") == "over_under" or "over_odds" in market:
@@ -113,6 +116,8 @@ def _snapshots_from_envelope(envelope: EvidenceEnvelope) -> list[MarketSnapshot]
         try:
             line = float(total)
         except (TypeError, ValueError):
+            continue
+        if not math.isfinite(line):
             continue
         out.append(
             MarketSnapshot(
@@ -166,6 +171,8 @@ def _select_pre_tip_line(
             line_val = float(row.get("line_value"))
         except (TypeError, ValueError):
             continue
+        if not math.isfinite(line_val):
+            continue
         from mbm.intake.types import MarketLine, MarketScope
 
         pre_tip_props.append(
@@ -186,6 +193,12 @@ def _select_pre_tip_line(
     # Mason-attached lines (no provider timestamp) remain last-resort for tests.
     for line in envelope.market_lines:
         if target_player is not None and str(line.player_id) != target_player:
+            continue
+        try:
+            line_val = float(line.line)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(line_val):
             continue
         return line
     return None

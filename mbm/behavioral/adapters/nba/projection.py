@@ -6,6 +6,7 @@ comparison and ROI measurement only.
 
 from __future__ import annotations
 
+import math
 from typing import Sequence
 
 from mbm.behavioral.adapters.nba.leakage import market_snapshot_usable, parse_iso, try_parse_iso
@@ -21,11 +22,13 @@ def select_pre_tip_snapshots(
     """Keep snapshots with parseable ``captured_at`` strictly before ``game_start``.
 
     ``game_start`` should be the prediction ``as_of`` when called from gates.
+    Non-finite lines are rejected (Infinity/NaN must not drive edge or grade).
     """
     return [
         s
         for s in snapshots
-        if market_snapshot_usable(captured_at=s.captured_at, game_start=game_start)
+        if math.isfinite(float(s.line))
+        and market_snapshot_usable(captured_at=s.captured_at, game_start=game_start)
     ]
 
 

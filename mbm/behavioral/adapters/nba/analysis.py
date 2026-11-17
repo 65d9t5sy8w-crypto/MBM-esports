@@ -169,8 +169,14 @@ def stats_from_envelope_context(map_context: dict[str, Any]) -> list[PlayerGameS
         )
         if not game_start:
             continue
+        try:
+            parse_iso(observed)
+            parse_iso(game_start)
+            season = int(game.get("season") or row.get("season") or 0)
+        except (TypeError, ValueError):
+            # One bad timestamp/season must not abort board assembly.
+            continue
         player_id = str(player.get("id") or row.get("player_id") or "")
-        season = int(game.get("season") or row.get("season") or 0)
         # Infer opponent from game home/visitor when explicit opponent missing.
         if not opp_id:
             home = game.get("home_team") if isinstance(game.get("home_team"), dict) else {}

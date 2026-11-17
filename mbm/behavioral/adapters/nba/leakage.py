@@ -18,7 +18,8 @@ from mbm.behavioral.adapters.nba.types import TimedObservation
 
 def parse_iso(ts: str) -> datetime:
     text = str(ts).strip().replace("Z", "+00:00")
-    if "T" not in text:
+    # Date-only → midnight UTC. Do not rewrite space-separated datetimes.
+    if "T" not in text and " " not in text:
         text = f"{text}T00:00:00+00:00"
     dt = datetime.fromisoformat(text)
     if dt.tzinfo is None:
